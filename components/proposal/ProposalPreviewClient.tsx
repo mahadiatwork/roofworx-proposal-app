@@ -52,13 +52,28 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
             const element = document.getElementById('legacy-proposal-pdf');
             if (!element) throw new Error("PDF component not found");
 
-            const canvas = await html2canvas(element, { scale: 2, logging: false });
-            const imgData = canvas.toDataURL('image/png');
+            // Reduced scale and JPEG compression to keep payload under Vercel limits (4.5MB)
+            const canvas = await html2canvas(element, { 
+                scale: 1.5, 
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            });
             
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/jpeg', 0.75); // Use JPEG 75% for significantly smaller size than PNG
+            
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+            
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            
+            // Add image as JPEG with compression
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             
             const pdfBlob = pdf.output('blob');
             const quoteId = searchParams?.get('quoteId') || proposal.id;
