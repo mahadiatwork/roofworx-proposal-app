@@ -422,7 +422,7 @@ export function ProposalPageClient({
             toEmail: jobMeta.contactEmail,
             subject: `Roofing Proposal for ${jobMeta.accountName} - ${proposal.title}`,
             body: `Hi ${jobMeta.contactName},\n\nIt was a pleasure meeting you to discuss your project. We have prepared a detailed digital proposal for the exterior work we discussed.\n\nYou can review the specifications and approve or request changes by clicking the secure link below.\n\nThank you for considering RoofWorx Exteriors!`,
-            proposalUrl: typeof window !== 'undefined' ? `${window.location.origin}/p/${jobId}?quoteId=${activeQuoteId}` : "",
+            proposalUrl: `https://roofworx-proposal-app.vercel.app/p/${jobId}?quoteId=${activeQuoteId}`,
             recipientModule: jobMeta.recipientModule,
             recipientId: jobMeta.recipientId
           }}
