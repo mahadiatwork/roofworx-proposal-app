@@ -273,9 +273,9 @@ class ZohoCRMClient {
       return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-         console.error("❌ Zoho Send Mail Error:", JSON.stringify(error.response?.data, null, 2));
+        console.error("❌ Zoho Send Mail Error:", JSON.stringify(error.response?.data, null, 2));
       } else {
-         console.error("❌ Email Send Error:", error);
+        console.error("❌ Email Send Error:", error);
       }
       throw error;
     }
@@ -290,7 +290,8 @@ class ZohoCRMClient {
 
     // Use native FormData (available in Node 18+)
     const formData = new FormData();
-    const blob = new Blob([fileContent]);
+    const fileBytes = new Uint8Array(fileContent);
+    const blob = new Blob([fileBytes]);
     formData.append('file', blob, fileName);
 
     try {
