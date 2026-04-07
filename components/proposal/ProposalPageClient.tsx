@@ -350,6 +350,8 @@ export function ProposalPageClient({
               lastEditedAt={proposal.lastEditedAt}
               onSend={handleSend}
               onPreview={handlePreview}
+              onSaveDraft={handleSaveDraft}
+              isSaving={isSaving}
             />
           </>
         ) : (
@@ -395,9 +397,9 @@ export function ProposalPageClient({
                 )}
               </div>
 
-              <button className="btn-dashboard-new" onClick={handleAddNew}>
+              <button className="btn-dashboard-new" type="button" onClick={handleAddNew}>
                 <Plus size={18} />
-                New Proposal
+                Proposal App
               </button>
             </div>
           </div>

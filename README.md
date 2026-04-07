@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Zoho CRM (manual configuration)
+
+- **Module label:** In Zoho CRM, open **Setup → Modules & Fields** and rename the **Our Products** module to **Scopes of Work** so labels match this app. If the API module name changes after rename, update the corresponding module key in the Zoho integration code (e.g. `Our_Products` in `getProposalData`).
+- **Deal / Job actions:** The primary entry to this web app should be the **Proposal App** action (highest emphasis). Remove **Create Estimate** and **Create Change Order** from the CRM Deal page if they are present there—these are configured in Zoho, not in this repository.
+
 ## Getting Started
 
 First, run the development server:

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Mail, MapPin, Phone, Globe, Loader2 } from "lucide-react";
+import { Check, Mail, MapPin, Phone, Globe, Loader2, ChevronDown } from "lucide-react";
+import { ROOFWORX_TERMS_AND_CONDITIONS } from "@/lib/terms-and-conditions";
 import { useSearchParams } from "next/navigation";
 import type { Proposal, JobMeta } from "./types";
 import { SignatureModal } from "./SignatureModal";
@@ -17,13 +18,29 @@ interface ProposalPreviewProps {
 
 export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProps) {
     const searchParams = useSearchParams();
-    const [selectedOptionals, setSelectedOptionals] = useState<Set<string>>(new Set());
+    const [selectedOptionals, setSelectedOptionals] = useState<Set<string>>(() => {
+        const initial = new Set<string>();
+        proposal.sections.forEach(s => {
+            s.lineItems.forEach(li => {
+                if (li.purchaseOption === "Accepted") {
+                    initial.add(li.id);
+                }
+            });
+        });
+        return initial;
+    });
     const [isApproving, setIsApproving] = useState(false);
     const [isApproved, setIsApproved] = useState(proposal.status === 'approved' || (proposal as any).status === 'Accepted');
     const [isSigModalOpen, setIsSigModalOpen] = useState(false);
     const [signatureData, setSignatureData] = useState<string | undefined>(undefined);
+    const [termsExpanded, setTermsExpanded] = useState(false);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     const toggleOptional = (id: string) => {
+        // Locked if already Accepted/Approved in CRM
+        const item = proposal.sections.flatMap(s => s.lineItems).find(li => li.id === id);
+        if (item?.purchaseOption === "Accepted") return;
+
         const next = new Set(selectedOptionals);
         if (next.has(id)) next.delete(id);
         else next.add(id);
@@ -31,6 +48,10 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     };
 
     const handleApprove = () => {
+        if (!agreedToTerms) {
+            alert("Please read and agree to the Terms & Conditions before approving.");
+            return;
+        }
         const quoteId = searchParams?.get('quoteId') || proposal.id;
         if (!quoteId || quoteId.startsWith('new-')) {
             alert("Error: Missing valid proposal identifier.");
@@ -84,6 +105,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
             formData.append('jobId', jobMeta.recipientId);
             formData.append('signature', base64);
             formData.append('pdf', pdfBlob, `Proposal-${jobMeta.proposalNumber}.pdf`);
+            formData.append('selectedOptionals', JSON.stringify(Array.from(selectedOptionals)));
 
             const res = await fetch("/api/proposals/approve", {
                 method: "POST",
@@ -174,18 +196,19 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                 <div className="preview-sections">
                     {proposal.sections.map((section, sIdx) => (
                         <div key={section.id} className="preview-section" style={{ animation: `slideUp 0.6s ease-out ${sIdx * 0.1}s both` }}>
-                            <h3 className="preview-section-title">{section.title}</h3>
+                            {/* Client view: scope titles/codes are hidden; admin uses the editor. */}
                             <div className="preview-items">
                                 {section.lineItems.map((item) => (
                                     <div key={item.id} className={`preview-item-row ${item.optional ? 'is-optional' : ''}`}>
                                         <div className="item-main-content">
                                             <div className="item-header-row">
-                                                <h4 className="item-name">{item.name}</h4>
-                                                <div className="item-price-pill">
+                                                <p className="item-description item-description--client">{item.description}</p>
+                                                <div className="item-price-pill item-price-pill--client">
                                                     {item.optional && (
                                                         <button
                                                             className={`preview-select-btn ${selectedOptionals.has(item.id) ? 'selected' : ''}`}
                                                             onClick={() => toggleOptional(item.id)}
+                                                            type="button"
                                                             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                                                         >
                                                             {selectedOptionals.has(item.id) && <Check size={12} />}
@@ -197,7 +220,6 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                                                     </span>
                                                 </div>
                                             </div>
-                                            <p className="item-description">{item.description}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -206,7 +228,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                     ))}
                 </div>
 
-                {/* ── Final Summary & Approval CTA ─────────────────────────────── */}
+                {/* ── Final Summary, Terms, Approval ───────────────────────────── */}
                 <footer className="preview-footer-cta">
                     <div className="grand-total-section">
                         {proposal.discount > 0 && (
@@ -235,11 +257,45 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                         )}
                     </div>
 
+                    <section className="preview-terms-section" aria-label="Terms and Conditions">
+                        <button
+                            type="button"
+                            className="preview-terms-toggle"
+                            onClick={() => setTermsExpanded((v) => !v)}
+                            aria-expanded={termsExpanded}
+                        >
+                            <ChevronDown
+                                size={20}
+                                className={`preview-terms-chevron ${termsExpanded ? "is-open" : ""}`}
+                                aria-hidden
+                            />
+                            <span className="preview-terms-toggle-label">Terms & Conditions</span>
+                            <span className="preview-terms-toggle-hint">
+                                {termsExpanded ? "Hide" : "View full Terms & Conditions"}
+                            </span>
+                        </button>
+                        {termsExpanded && (
+                            <div className="preview-terms-body">
+                                <pre className="preview-terms-pre">{ROOFWORX_TERMS_AND_CONDITIONS}</pre>
+                            </div>
+                        )}
+                    </section>
+
+                    <label className="preview-terms-agree-row">
+                        <input
+                            type="checkbox"
+                            checked={agreedToTerms}
+                            onChange={(e) => setAgreedToTerms(e.target.checked)}
+                            disabled={isApproved}
+                        />
+                        <span>I have read and agree to the Terms & Conditions</span>
+                    </label>
+
                     <div className="action-buttons">
                         <button 
                             className={`btn-approve-primary ${isApproved ? 'is-approved' : ''}`}
                             onClick={handleApprove}
-                            disabled={isApproving || isApproved}
+                            disabled={isApproving || isApproved || !agreedToTerms}
                         >
                             {isApproving ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                             {isApproved ? 'Proposal Approved' : 'Approve Proposal'}

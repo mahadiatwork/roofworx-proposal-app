@@ -11,6 +11,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "RoofWorx | Create Proposal",
   description: "RoofWorx proposal builder — create and send professional roofing proposals",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml", sizes: "32x32" }],
+  },
 };
 
 export default function RootLayout({

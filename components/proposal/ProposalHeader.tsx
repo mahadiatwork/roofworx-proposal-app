@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * Header actions for the in-app proposal editor.
+ *
+ * Zoho CRM (Deal / Job page — configure in Zoho, not in this repo): The primary entry to this
+ * web app should be labeled "Proposal App" and use the highest-emphasis (primary) style. Remove
+ * the "Create Estimate" and "Create Change Order" buttons from that page if they are present,
+ * along with any associated workflow actions.
+ */
+
 import { FileText, Loader2, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import type { JobMeta } from "@/components/proposal/types";
@@ -81,7 +90,7 @@ export function ProposalHeader({
               className="btn-header-primary"
               onClick={onSend}
             >
-              Send Proposal
+              Proposal App
             </button>
           </>
         )}

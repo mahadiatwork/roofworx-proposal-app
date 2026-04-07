@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Send, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
 
 interface SendProposalModalProps {
@@ -30,11 +30,24 @@ export function SendProposalModal({
   isSending,
 }: SendProposalModalProps) {
   const [draft, setDraft] = useState<ProposalEmailDraft>(defaultDraft);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAgreedToTerms(false);
+      setDraft(defaultDraft);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when modal opens; avoid re-running on every defaultDraft identity change from parent
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedToTerms) {
+      alert("Please confirm that you have read and agree to the Terms & Conditions before sending.");
+      return;
+    }
     await onConfirmSend(draft);
   };
 
@@ -99,11 +112,20 @@ export function SendProposalModal({
             </div>
           </div>
 
+          <label className="send-modal-terms-agree">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+            />
+            <span>I have read and agree to the Terms & Conditions</span>
+          </label>
+
           <div className="send-modal-footer">
             <button type="button" className="btn-cancel" onClick={onClose} disabled={isSending}>
               Cancel
             </button>
-            <button type="submit" className="btn-send-confirm" disabled={isSending}>
+            <button type="submit" className="btn-send-confirm" disabled={isSending || !agreedToTerms}>
               {isSending ? (
                 <>
                   <Loader2 className="animate-spin" size={18} />
@@ -204,6 +226,21 @@ export function SendProposalModal({
           font-weight: 600;
           color: var(--rw-green);
           word-break: break-all;
+        }
+        .send-modal-terms-agree {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          font-size: 14px;
+          color: #374151;
+          cursor: pointer;
+        }
+        .send-modal-terms-agree input {
+          margin-top: 3px;
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+          accent-color: var(--rw-green);
         }
         .send-modal-footer {
           display: flex;

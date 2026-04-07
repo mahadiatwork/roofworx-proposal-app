@@ -105,21 +105,61 @@ function SectionCard({ section, index, onRename, onAdd, onRemove, onDuplicate, o
 }
 
 function LineItemRow({ item, onUpdate, onRemove }: { item: LineItem, onUpdate: (i: LineItem) => void, onRemove: () => void }) {
+  const isAccepted = item.purchaseOption === "Accepted";
+
   return (
-    <div className="line-item-row">
+    <div className={`line-item-row ${isAccepted ? 'is-accepted' : ''}`}>
       <GripVertical size={14} style={{ color: '#DDD', marginTop: '4px' }} />
       <div className="line-item-main">
         <div className="line-item-top">
-          <input className="line-item-name-input" value={item.name} onChange={(e) => onUpdate({ ...item, name: e.target.value })} />
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input 
+              className="line-item-name-input" 
+              value={item.name} 
+              onChange={(e) => onUpdate({ ...item, name: e.target.value })} 
+              disabled={isAccepted}
+            />
+            {isAccepted && (
+              <span style={{ 
+                fontSize: '9px', 
+                fontWeight: 800, 
+                backgroundColor: '#DCFCE7', 
+                color: '#166534', 
+                padding: '2px 6px', 
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Accepted
+              </span>
+            )}
+          </div>
           <div className="line-item-controls">
             <div className="item-optional-wrap">
-              <span>Optional</span>
-              <button className={`toggle-switch ${item.optional ? 'active' : ''}`} onClick={() => onUpdate({ ...item, optional: !item.optional })} />
+              <span style={{ opacity: isAccepted ? 0.5 : 1 }}>Optional</span>
+              <button 
+                className={`toggle-switch ${item.optional ? 'active' : ''} ${isAccepted ? 'is-disabled' : ''}`} 
+                onClick={() => !isAccepted && onUpdate({ ...item, optional: !item.optional })} 
+                disabled={isAccepted}
+              />
             </div>
             <div className="price-pill-input">
               <span className="currency-icon">$</span>
-              <input type="number" className="price-input" value={item.price} onChange={(e) => onUpdate({ ...item, price: parseFloat(e.target.value) || 0 })} />
-              <button className="btn-section-icon" style={{ marginLeft: '12px' }} onClick={onRemove}><Trash2 size={13} /></button>
+              <input 
+                type="number" 
+                className="price-input" 
+                value={item.price} 
+                onChange={(e) => onUpdate({ ...item, price: parseFloat(e.target.value) || 0 })} 
+                disabled={isAccepted}
+              />
+              <button 
+                className="btn-section-icon" 
+                style={{ marginLeft: '12px', opacity: isAccepted ? 0.3 : 1 }} 
+                onClick={isAccepted ? undefined : onRemove}
+                disabled={isAccepted}
+              >
+                <Trash2 size={13} />
+              </button>
             </div>
           </div>
         </div>
@@ -128,6 +168,7 @@ function LineItemRow({ item, onUpdate, onRemove }: { item: LineItem, onUpdate: (
           value={item.description}
           onChange={(e) => onUpdate({ ...item, description: e.target.value })}
           placeholder="Description..."
+          disabled={isAccepted}
         />
       </div>
     </div>

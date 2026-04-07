@@ -40,6 +40,20 @@ export async function POST(req: NextRequest) {
         console.log("📄 PDF attached to record");
       }
 
+      // 3. Update Optional items to "Accepted"
+      const selectedOptionalsStr = formData.get("selectedOptionals") as string;
+      if (selectedOptionalsStr) {
+        const selectedIds = JSON.parse(selectedOptionalsStr) as string[];
+        console.log(`📦 Updating ${selectedIds.length} optional items to 'Accepted'...`);
+        for (const itemId of selectedIds) {
+           if (itemId && !itemId.startsWith('new-')) {
+             await zohoClient.updateRecord("Product_X_Quotes", itemId, {
+               Purchase_Option: "Accepted"
+             });
+           }
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: "Proposal approved and files attached.",

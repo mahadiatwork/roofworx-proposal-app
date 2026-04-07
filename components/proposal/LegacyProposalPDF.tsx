@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { Proposal, JobMeta } from "./types";
+import { ROOFWORX_TERMS_AND_CONDITIONS } from "@/lib/terms-and-conditions";
 
 interface LegacyProposalPDFProps {
   proposal: Proposal;
@@ -100,21 +101,16 @@ export function LegacyProposalPDF({
         </p>
       </div>
 
-      {/* ── Scope of Work ─────────────────────────────────────────── */}
+      {/* ── Scope of Work (customer-facing: descriptions only, no scope codes/titles) ── */}
       <div style={{ fontSize: "12px", marginBottom: "30px" }}>
         {proposal.sections.map((section) => (
           <div key={section.id} style={{ marginBottom: "15px" }}>
-            <h3 style={{ fontSize: "13px", margin: "0 0 8px 0", textTransform: "uppercase", borderBottom: "1px solid #EEE" }}>
-              {section.title}
-            </h3>
             <ol style={{ paddingLeft: "20px", margin: "0" }}>
               {section.lineItems.map((item) => (
                 <li key={item.id} style={{ marginBottom: "6px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>
-                      <strong>{item.name}</strong> - {item.description}
-                    </span>
-                    <span style={{ fontWeight: "bold" }}>${item.price.toLocaleString()}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                    <span>{item.description || "—"}</span>
+                    <span style={{ fontWeight: "bold", flexShrink: 0 }}>${item.price.toLocaleString()}</span>
                   </div>
                 </li>
               ))}
@@ -132,8 +128,21 @@ export function LegacyProposalPDF({
           <strong>NOTE:</strong> Charges includes removal of up to one (1) layers of roofing; if additional layers are found, additional cost to the Customer will be added to contract.
         </p>
         <p style={{ margin: "8px 0" }}>
-           The Work provided hereunder is subject to the Roof Worx Exteriors, Inc. Standard Terms and Conditions attached.
+           The Work provided hereunder is subject to the Roof Worx Exteriors, Inc. Standard Terms and Conditions below.
         </p>
+
+        <div
+          style={{
+            marginTop: "16px",
+            padding: "12px",
+            border: "1px solid #ccc",
+            fontSize: "9px",
+            lineHeight: 1.35,
+          }}
+        >
+          <div style={{ fontWeight: "bold", marginBottom: "6px" }}>TERMS AND CONDITIONS</div>
+          <div style={{ whiteSpace: "pre-wrap" }}>{ROOFWORX_TERMS_AND_CONDITIONS}</div>
+        </div>
         
         <div style={{ marginTop: "20px", borderTop: "2px solid black", paddingTop: "10px" }}>
           <p style={{ fontSize: "16px", fontWeight: "900", margin: "10px 0" }}>

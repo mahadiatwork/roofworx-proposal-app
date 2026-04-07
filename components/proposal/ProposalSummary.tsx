@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Send, Eye, FileText, LayoutGrid } from "lucide-react";
+import { Clock, Send } from "lucide-react";
 import type { Proposal } from "@/components/proposal/types";
 
 interface ProposalSummaryProps {
@@ -10,6 +10,8 @@ interface ProposalSummaryProps {
   lastEditedAt: string;
   onSend: () => void;
   onPreview: () => void;
+  onSaveDraft: () => void;
+  isSaving?: boolean;
 }
 
 export function ProposalSummary({
@@ -19,6 +21,8 @@ export function ProposalSummary({
   lastEditedAt,
   onSend,
   onPreview,
+  onSaveDraft,
+  isSaving,
 }: ProposalSummaryProps) {
   const allItems = sections.flatMap((s) => s.lineItems);
 
@@ -92,12 +96,14 @@ export function ProposalSummary({
         
         <button className="btn-send-main" onClick={onSend}>
            <Send size={18} />
-           Send Proposal
+           Proposal App
         </button>
 
         <div className="summary-footer-btns">
             <button className="btn-summary-outline" onClick={onPreview}>Preview as Client</button>
-            <button className="btn-summary-outline">Save Draft</button>
+            <button className="btn-summary-outline" type="button" onClick={onSaveDraft} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Draft"}
+            </button>
         </div>
 
         <p className="summary-send-note">

@@ -1,6 +1,10 @@
 // lib/mock-data.ts
 // Structured to mirror the shape of data that will come from Zoho + DB later.
 // Replace `getProposalData` with a real fetch when ready.
+//
+// Zoho CRM (manual setup — not enforced by code): In Setup → Modules & Fields, rename the
+// "Our Products" module to "Scopes of Work" so CRM labels match the app. Update API module
+// names in `ZohoCRMClient` / `getProposalData` if your Zoho API name changes after rename.
 
 export type LineItem = {
   id: string;
@@ -8,6 +12,7 @@ export type LineItem = {
   description: string;
   price: number;
   optional: boolean;
+  purchaseOption?: "Mandatory" | "Optional" | "Accepted";
   zohoProductId?: string;
 };
 
@@ -225,6 +230,7 @@ export const MOCK_PROPOSAL: Proposal = {
 };
 
 import { zohoClient } from "./zoho/ZohoCRMClient";
+import { sortCatalogByScopeOrder } from "@/lib/catalog-order";
 
 export async function getProposalData(jobId: string, quoteId?: string, isNew?: boolean): Promise<{
   jobMeta: JobMeta;
@@ -297,7 +303,8 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
            name: (ri.Products as any)?.name || "Product", // Zoho lookup often returns {name, id}
            description: (ri.Product_Description as string) || "",
            price: normalizePrice(ri.Pricing),
-           optional: false,
+           optional: ri.Purchase_Option === "Optional" || ri.Purchase_Option === "Accepted",
+           purchaseOption: (ri.Purchase_Option as any) || "Mandatory",
            zohoProductId: (ri.Products as any)?.id || ""
          }));
 
@@ -316,14 +323,16 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
        }
     }
 
-    const liveCatalog = products
-      .map(mapZohoProductToCatalogItem)
-      .filter((item): item is CatalogItem => item !== null);
+    const liveCatalog = sortCatalogByScopeOrder(
+      products
+        .map(mapZohoProductToCatalogItem)
+        .filter((item): item is CatalogItem => item !== null)
+    );
 
     return {
       jobMeta: liveJobMeta,
       proposal: activeProposal,
-      catalog: liveCatalog.length > 0 ? liveCatalog : CATALOG_ITEMS,
+      catalog: liveCatalog.length > 0 ? liveCatalog : sortCatalogByScopeOrder(CATALOG_ITEMS),
       existingProposals
     };
   } catch (error) {

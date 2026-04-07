@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       Pricing: li.price,
       Quantity: 1,
       Product_Description: li.description || "",
+      Purchase_Option: li.optional ? "Optional" : "Mandatory",
     }));
 
     let createdCount = 0;
