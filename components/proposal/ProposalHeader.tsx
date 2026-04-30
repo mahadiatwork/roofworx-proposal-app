@@ -4,17 +4,32 @@
  * Header actions for the in-app proposal editor.
  *
  * Zoho CRM (Deal / Job page — configure in Zoho, not in this repo): The primary entry to this
- * web app should be labeled "Proposal App" and use the highest-emphasis (primary) style. Remove
+ * web app may be labeled e.g. "Proposal App" in CRM; in-app, the main action is "Send Proposal".
+ * Remove
  * the "Create Estimate" and "Create Change Order" buttons from that page if they are present,
  * along with any associated workflow actions.
  */
 
 import { FileText, Loader2, ChevronLeft } from "lucide-react";
 import Image from "next/image";
-import type { JobMeta } from "@/components/proposal/types";
+import type { JobMeta, Proposal } from "@/components/proposal/types";
+
+function proposalStatusLabel(status: Proposal["status"]): string {
+  switch (status) {
+    case "sent":
+      return "Proposal Sent";
+    case "approved":
+      return "Approved";
+    case "declined":
+      return "Declined";
+    default:
+      return "Draft";
+  }
+}
 
 interface HeaderProps {
   jobMeta: JobMeta;
+  proposalStatus: Proposal["status"];
   onSaveDraft: () => void;
   onPreview: () => void;
   onSend: () => void;
@@ -26,6 +41,7 @@ interface HeaderProps {
 
 export function ProposalHeader({
   jobMeta,
+  proposalStatus,
   onSaveDraft,
   onPreview,
   onSend,
@@ -53,11 +69,21 @@ export function ProposalHeader({
               Back to Proposals
             </button>
             <div className="header-job-summary">
-               <div className="job-title-row">
+                 <div className="job-title-row">
                  <span className="job-name">{jobMeta.accountName}</span>
-                 <div className="header-status-pill">
-                    <span className="status-dot active" />
-                    Draft
+                 <div
+                   className={`header-status-pill ${
+                     proposalStatus === "sent"
+                       ? "header-status-pill--sent"
+                       : "header-status-pill--draft"
+                   }`}
+                 >
+                    <span
+                      className={`status-dot ${
+                        proposalStatus === "sent" ? "is-sent" : "active"
+                      }`}
+                    />
+                    {proposalStatusLabel(proposalStatus)}
                  </div>
                </div>
                <div className="job-address-sub">{jobMeta.propertyAddress}</div>
@@ -90,7 +116,7 @@ export function ProposalHeader({
               className="btn-header-primary"
               onClick={onSend}
             >
-              Proposal App
+              Send Proposal
             </button>
           </>
         )}

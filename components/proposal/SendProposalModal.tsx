@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { X, Send, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
 
 interface SendProposalModalProps {
@@ -45,7 +46,7 @@ export function SendProposalModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreedToTerms) {
-      alert("Please confirm that you have read and agree to the Terms & Conditions before sending.");
+      toast.warning("Agree to the Terms & Conditions before sending.");
       return;
     }
     await onConfirmSend(draft);

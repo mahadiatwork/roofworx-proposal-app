@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Plus, FileEdit, ChevronRight } from "lucide-react";
 import { ProposalHeader, MetaBar } from "@/components/proposal/ProposalHeader";
 import { ProjectCatalog } from "@/components/proposal/ProjectCatalog";
@@ -244,7 +245,7 @@ export function ProposalPageClient({
       
     } catch (error: any) {
       console.error("❌ Error saving draft:", error);
-      alert(`⚠️ Failed to save draft: ${error.message}`);
+      toast.error(`Failed to save draft: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -257,7 +258,7 @@ export function ProposalPageClient({
   const handleSend = useCallback(() => {
     // 1. Ensure we have a saved quote id
     if (isNewMode || !activeQuoteId) {
-      alert("⚠️ Please save your proposal as a draft before sending it to the client.");
+      toast.warning("Save your proposal as a draft before sending it to the client.");
       return;
     }
     setIsSendModalOpen(true);
@@ -278,7 +279,7 @@ export function ProposalPageClient({
         throw new Error(data.error || "Failed to send proposal");
       }
 
-      alert(`✅ Proposal has been sent successfully to ${draft.toEmail}`);
+      toast.success(`Proposal sent to ${draft.toEmail}`);
       setIsSendModalOpen(false);
       
       // Update local state to reflect the sent status
@@ -286,7 +287,7 @@ export function ProposalPageClient({
       
     } catch (error: any) {
       console.error("❌ Send Error:", error);
-      alert(`⚠️ Failed to send proposal: ${error.message}`);
+      toast.error(`Failed to send proposal: ${error.message}`);
     } finally {
       setIsSending(false);
     }
@@ -308,6 +309,7 @@ export function ProposalPageClient({
     <div className="page-shell">
       <ProposalHeader
         jobMeta={jobMeta}
+        proposalStatus={proposal.status}
         onSaveDraft={handleSaveDraft}
         onPreview={handlePreview}
         onSend={handleSend}
@@ -399,7 +401,7 @@ export function ProposalPageClient({
 
               <button className="btn-dashboard-new" type="button" onClick={handleAddNew}>
                 <Plus size={18} />
-                Proposal App
+                New Proposal
               </button>
             </div>
           </div>

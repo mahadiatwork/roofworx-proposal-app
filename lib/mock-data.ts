@@ -32,6 +32,18 @@ export type Proposal = {
   discount: number;
 };
 
+/** Map Zoho New_Quotes.Quote_Status picklist values to app status. */
+export function normalizeProposalStatusFromZoho(raw: unknown): Proposal["status"] {
+  const s = String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  if (s === "sent" || s === "proposal sent") return "sent";
+  if (s === "approved" || s === "accepted") return "approved";
+  if (s === "declined" || s === "rejected") return "declined";
+  return "draft";
+}
+
 export type JobMeta = {
   jobTicket: string;
   proposalNumber: string;
@@ -313,7 +325,7 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
            id: fullQuote.id,
            title: (fullQuote.Name as string) || activeProposal.title,
            lastEditedAt: (fullQuote.Modified_Time as string) || activeProposal.lastEditedAt,
-           status: (fullQuote.Quote_Status?.toString().toLowerCase() as any) || "draft",
+           status: normalizeProposalStatusFromZoho(fullQuote.Quote_Status),
            sections: lineItems.length > 0 ? [{
              id: `section-${quoteToLoadId}`,
              title: "Proposal Items",

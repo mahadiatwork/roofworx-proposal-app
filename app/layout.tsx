@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import "sonner/dist/styles.css";
 import "./globals.css";
+import { SonnerToaster } from "@/components/ui/sonner-toaster";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,7 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <SonnerToaster />
+      </body>
     </html>
   );
 }

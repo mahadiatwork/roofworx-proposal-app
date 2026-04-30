@@ -96,7 +96,7 @@ export function ProposalSummary({
         
         <button className="btn-send-main" onClick={onSend}>
            <Send size={18} />
-           Proposal App
+           Send Proposal
         </button>
 
         <div className="summary-footer-btns">
