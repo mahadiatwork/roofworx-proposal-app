@@ -240,8 +240,11 @@ export function ProposalPageClient({
       
       setProposal((p) => ({ 
         ...p, 
+        id: data.quoteId,
+        status: "draft",
         lastEditedAt: data.savedAt || new Date().toISOString() 
       }));
+      router.replace(`/proposal/${jobId}?quoteId=${encodeURIComponent(data.quoteId)}`);
       
     } catch (error: any) {
       console.error("❌ Error saving draft:", error);
@@ -249,7 +252,7 @@ export function ProposalPageClient({
     } finally {
       setIsSaving(false);
     }
-  }, [jobId, proposal, jobMeta]);
+  }, [jobId, proposal, jobMeta, router]);
 
   const handlePreview = useCallback(() => {
     setIsPreviewOpen(true);
@@ -257,12 +260,12 @@ export function ProposalPageClient({
 
   const handleSend = useCallback(() => {
     // 1. Ensure we have a saved quote id
-    if (isNewMode || !activeQuoteId) {
+    if (!activeQuoteId && proposal.id.startsWith("new-")) {
       toast.warning("Save your proposal as a draft before sending it to the client.");
       return;
     }
     setIsSendModalOpen(true);
-  }, [isNewMode, activeQuoteId]);
+  }, [activeQuoteId, proposal.id]);
 
   const handleConfirmSend = useCallback(async (draft: ProposalEmailDraft) => {
     setIsSending(true);
@@ -414,19 +417,19 @@ export function ProposalPageClient({
         proposal={proposal}
         jobMeta={jobMeta}
       />
-      {isSendModalOpen && activeQuoteId && (
+      {isSendModalOpen && (activeQuoteId || !proposal.id.startsWith("new-")) && (
         <SendProposalModal
           isOpen={isSendModalOpen}
           onClose={() => setIsSendModalOpen(false)}
           onConfirmSend={handleConfirmSend}
           isSending={isSending}
           defaultDraft={{
-            quoteId: activeQuoteId,
+            quoteId: activeQuoteId || proposal.id,
             jobId: jobId,
             toEmail: jobMeta.contactEmail,
             subject: `Roofing Proposal for ${jobMeta.accountName} - ${proposal.title}`,
             body: `Hi ${jobMeta.contactName},\n\nIt was a pleasure meeting you to discuss your project. We have prepared a detailed digital proposal for the exterior work we discussed.\n\nYou can review the specifications and approve or request changes by clicking the secure link below.\n\nThank you for considering RoofWorx Exteriors!`,
-            proposalUrl: `https://roofworx-proposal-app.vercel.app/p/${jobId}?quoteId=${activeQuoteId}`,
+            proposalUrl: `https://roofworx-proposal-app.vercel.app/p/${jobId}?quoteId=${activeQuoteId || proposal.id}`,
             recipientModule: jobMeta.recipientModule,
             recipientId: jobMeta.recipientId
           }}

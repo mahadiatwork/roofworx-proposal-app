@@ -90,6 +90,11 @@ type ZohoDealRecord = {
   Email?: string;
 };
 
+type ZohoContactRecord = {
+  id?: string;
+  Email?: string;
+};
+
 type ZohoProductRecord = {
   id?: string;
   Name?: string;
@@ -108,15 +113,25 @@ function normalizePrice(value: number | string | undefined): number {
   return 0;
 }
 
+import {
+  ROOFWORX_CONTRACTOR_INTRO,
+  ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION,
+} from "@/lib/terms-and-conditions";
+
+function getCatalogDescription(name: string, fallback: string): string {
+  return /1\s*ct\s*t-?off/i.test(name) ? ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION : fallback;
+}
+
 function mapZohoProductToCatalogItem(product: ZohoProductRecord, index: number): CatalogItem | null {
   const name = product.Name?.trim();
   if (!name) return null;
+  const fallbackDescription = product.Product_Description?.trim() || "No description provided";
 
   return {
     id: product.id ?? `our-product-${index}`,
     name,
     category: product.Product_Type?.trim() || product.Item_Type?.trim() || "Uncategorized",
-    description: product.Product_Description?.trim() || "No description provided",
+    description: getCatalogDescription(name, fallbackDescription),
     defaultPrice: normalizePrice(product.Selling_Price),
     zohoProductId: product.id ?? "",
   };
@@ -125,6 +140,14 @@ function mapZohoProductToCatalogItem(product: ZohoProductRecord, index: number):
 // ── Mock Catalog ──────────────────────────────────────────────────────────────
 
 export const CATALOG_ITEMS: CatalogItem[] = [
+  {
+    id: "cat-1-ct-t-off",
+    name: "1 CT T-OFF",
+    category: "Roofing",
+    description: ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_1_CT_T_OFF",
+  },
   {
     id: "cat-1",
     name: "Shingles",
@@ -233,8 +256,7 @@ export const MOCK_JOB_META: JobMeta = {
 export const MOCK_PROPOSAL: Proposal = {
   id: "prop-261075",
   title: "Complete Roof & Exterior Replacement",
-  introText:
-    "Thank you for considering RoofWorx Exteriors for your upcoming project. Based on our site visit, we have prepared the following detailed estimate for your review.",
+  introText: ROOFWORX_CONTRACTOR_INTRO,
   status: "draft",
   lastEditedAt: new Date().toISOString(),
   sections: [],
@@ -263,19 +285,24 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
       return null;
     }
 
+    const dealContact = deal.Contact_Name;
+    const contact = dealContact?.id
+      ? ((await zohoClient.getRecord("Contacts", dealContact.id)) as ZohoContactRecord | null)
+      : null;
+
     // 2. Map Zoho Deal to JobMeta
     const liveJobMeta: JobMeta = {
       ...MOCK_JOB_META, // Use mock as base for fields not in Deal yet
       jobTicket: deal.Deal_Name || MOCK_JOB_META.jobTicket,
       proposalNumber: deal.Proposal_ID || jobId,
       accountName: (deal.Account_Name as any)?.name || MOCK_JOB_META.accountName,
-      contactName: (deal.Contact_Name as any)?.name || MOCK_JOB_META.contactName,
-      contactEmail: (deal.Contact_Email as string) || (deal.Email as string) || MOCK_JOB_META.contactEmail,
+      contactName: dealContact?.name || MOCK_JOB_META.contactName,
+      contactEmail: contact?.Email || deal.Contact_Email || deal.Email || MOCK_JOB_META.contactEmail,
       propertyAddress: deal.Property_Address || MOCK_JOB_META.propertyAddress,
       // Zoho Owner field is an object { name, id }
       salesperson: (deal.Owner as any)?.name || MOCK_JOB_META.salesperson,
-      recipientModule: "Deals",
-      recipientId: deal.id || jobId,
+      recipientModule: dealContact?.id ? "Contacts" : "Deals",
+      recipientId: dealContact?.id || deal.id || jobId,
     };
 
     // 3. Fetch all existing quotes for this job

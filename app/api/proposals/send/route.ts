@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { zohoClient } from "@/lib/zoho/ZohoCRMClient";
 
+type ZohoSendMailResult = {
+  status?: string;
+  message?: string;
+  details?: {
+    message_id?: string;
+  };
+};
+
+type ZohoSendMailResponse = {
+  data?: ZohoSendMailResult[];
+};
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -32,19 +53,21 @@ export async function POST(req: NextRequest) {
     // 3. Build Zoho v8 Send Mail payload
     // Note: The 'from' email must usually be a confirmed address in Zoho CRM or a user's primary email.
     // For this implementation, we allow the request to use the system default org email logic if needed.
+    const safeBody = escapeHtml(emailBody);
+    const safeProposalUrl = escapeHtml(proposalUrl);
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; line-height: 1.6; color: #111;">
-        <div style="white-space: pre-wrap; margin-bottom: 32px;">${emailBody}</div>
+        <div style="white-space: pre-wrap; margin-bottom: 32px;">${safeBody}</div>
         
         <div style="margin-bottom: 32px;">
-          <a href="${proposalUrl}" style="background-color: #2D6A4F; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; display: inline-block; font-weight: 700; font-size: 16px;">
+          <a href="${safeProposalUrl}" style="background-color: #2D6A4F; color: #ffffff; padding: 14px 28px; border-radius: 10px; text-decoration: none; display: inline-block; font-weight: 700; font-size: 16px;">
             View Your Digital Proposal
           </a>
         </div>
         
         <div style="font-size: 12px; color: #9CA3AF; padding-top: 24px; border-top: 1px solid #F3F4F6;">
           If you're having trouble with the button above, copy and paste this URL into your browser:<br/>
-          <a href="${proposalUrl}" style="color: #2D6A4F;">${proposalUrl}</a>
+          <a href="${safeProposalUrl}" style="color: #2D6A4F;">${safeProposalUrl}</a>
         </div>
       </div>
     `;
@@ -63,6 +86,7 @@ export async function POST(req: NextRequest) {
           ],
           subject: subject,
           content: htmlContent,
+          mail_format: "html",
           org_email: false, 
         },
       ],
@@ -72,8 +96,20 @@ export async function POST(req: NextRequest) {
     // (Or after, but plan says after successful mail result)
     // We execute the mail call first.
     try {
-      const mailResult = await zohoClient.sendMail(finalModule, finalRecipientId, zohoPayload);
+      const mailResult = await zohoClient.sendMail(finalModule, finalRecipientId, zohoPayload) as ZohoSendMailResponse;
       console.log(`✅ Zoho v8 Success Response:`, JSON.stringify(mailResult));
+
+      const sendResult = mailResult.data?.[0];
+      if (sendResult?.status !== "success") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: sendResult?.message || "Zoho CRM did not confirm that the email was sent.",
+            details: mailResult,
+          },
+          { status: 502 }
+        );
+      }
 
       // 5. Update Status
       await zohoClient.updateRecord("New_Quotes", quoteId, {
@@ -84,7 +120,8 @@ export async function POST(req: NextRequest) {
         success: true,
         quoteId,
         sentAt: new Date().toISOString(),
-        recipient: toEmail
+        recipient: toEmail,
+        messageId: sendResult.details?.message_id,
       });
 
     } catch (zohoError: any) {

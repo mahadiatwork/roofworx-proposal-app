@@ -2,7 +2,15 @@
 
 import React from "react";
 import type { Proposal, JobMeta } from "./types";
-import { ROOFWORX_TERMS_AND_CONDITIONS } from "@/lib/terms-and-conditions";
+import {
+  ROOFWORX_ACCEPTANCE_TEXT,
+  ROOFWORX_CANCELLATION_NOTICE,
+  ROOFWORX_CONTRACTOR_INTRO,
+  ROOFWORX_PAYMENT_TERMS,
+  ROOFWORX_PROPOSAL_EXPIRATION,
+  ROOFWORX_PROPOSAL_NOTE,
+  ROOFWORX_STANDARD_TERMS_NOTICE,
+} from "@/lib/terms-and-conditions";
 
 interface LegacyProposalPDFProps {
   proposal: Proposal;
@@ -56,6 +64,7 @@ export function LegacyProposalPDF({
             <p style={{ margin: "2px 0" }}>Elk Grove Village, Illinois 60007</p>
             <p style={{ margin: "2px 0" }}>(630) 634-7600</p>
             <p style={{ margin: "2px 0" }}>office@roofworxext.com</p>
+            <p style={{ margin: "2px 0" }}>Lic. No. 104.019583</p>
           </div>
         </div>
         <div style={{ textAlign: "right", fontSize: "16px", fontWeight: "bold" }}>
@@ -92,13 +101,7 @@ export function LegacyProposalPDF({
 
       {/* ── Intro Text ────────────────────────────────────────────── */}
       <div style={{ fontSize: "12px", textAlign: "justify", marginBottom: "20px", borderTop: "2px solid black", paddingTop: "10px" }}>
-        <p style={{ margin: "0", fontWeight: "bold", textDecoration: "underline" }}>
-          ROOF WORX EXTERIORS, INC., an Illinois corporation,
-        </p>
-        <p style={{ margin: "4px 0" }}>
-          hereinafter ("CONTRACTOR") hereby proposes to furnish the materials and perform the labor necessary for the
-          completion of the following work (the "WORK"):
-        </p>
+        <p style={{ margin: "0" }}>{proposal.introText || ROOFWORX_CONTRACTOR_INTRO}</p>
       </div>
 
       {/* ── Scope of Work (customer-facing: descriptions only, no scope codes/titles) ── */}
@@ -109,7 +112,7 @@ export function LegacyProposalPDF({
               {section.lineItems.map((item) => (
                 <li key={item.id} style={{ marginBottom: "6px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
-                    <span>{item.description || "—"}</span>
+                    <span style={{ whiteSpace: "pre-line" }}>{item.description || "—"}</span>
                     <span style={{ fontWeight: "bold", flexShrink: 0 }}>${item.price.toLocaleString()}</span>
                   </div>
                 </li>
@@ -122,34 +125,21 @@ export function LegacyProposalPDF({
       {/* ── Fine Print (Red/Bold sections) ────────────────────────── */}
       <div style={{ fontSize: "11px", color: "#333", borderTop: "1px solid black", paddingTop: "15px" }}>
         <p style={{ margin: "8px 0", color: "#d32f2f" }}>
-          <strong>Proposal Expiration:</strong> Due to fluctuating material pricing in the construction industry we cannot hold to contract pricing for more than seven (7) days.
+          <strong>Proposal Expiration:</strong> {ROOFWORX_PROPOSAL_EXPIRATION}
         </p>
         <p style={{ margin: "8px 0" }}>
-          <strong>NOTE:</strong> Charges includes removal of up to one (1) layers of roofing; if additional layers are found, additional cost to the Customer will be added to contract.
+          <strong>NOTE:</strong> {ROOFWORX_PROPOSAL_NOTE}
         </p>
         <p style={{ margin: "8px 0" }}>
-           The Work provided hereunder is subject to the Roof Worx Exteriors, Inc. Standard Terms and Conditions below.
+          {ROOFWORX_STANDARD_TERMS_NOTICE}
         </p>
-
-        <div
-          style={{
-            marginTop: "16px",
-            padding: "12px",
-            border: "1px solid #ccc",
-            fontSize: "9px",
-            lineHeight: 1.35,
-          }}
-        >
-          <div style={{ fontWeight: "bold", marginBottom: "6px" }}>TERMS AND CONDITIONS</div>
-          <div style={{ whiteSpace: "pre-wrap" }}>{ROOFWORX_TERMS_AND_CONDITIONS}</div>
-        </div>
         
         <div style={{ marginTop: "20px", borderTop: "2px solid black", paddingTop: "10px" }}>
           <p style={{ fontSize: "16px", fontWeight: "900", margin: "10px 0" }}>
             PRICE: <span style={{ textDecoration: "underline", padding: "0 20px" }}>${grandTotal.toLocaleString()}</span> AND __/100 Dollars
           </p>
           <p style={{ fontWeight: "bold", margin: "10px 0" }}>
-            PAYMENT TO BE MADE AS FOLLOWS: 1/2 DOWN UPON EXECUTION OF THIS CONTRACT WITH PAYMENT IN FULL DUE UPON COMPLETION OF WORK.
+            {ROOFWORX_PAYMENT_TERMS}
           </p>
         </div>
       </div>
@@ -160,8 +150,7 @@ export function LegacyProposalPDF({
           ACCEPTANCE OF PROPOSAL
         </h2>
         <p style={{ fontSize: "12px", marginBottom: "30px" }}>
-          The above Contract Price and other prices, specifications, and conditions are satisfactory and are hereby accepted.
-          You are authorized to perform the Work as specified. Payment will be made as outlined above.
+          {ROOFWORX_ACCEPTANCE_TEXT}
         </p>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -197,6 +186,9 @@ export function LegacyProposalPDF({
             </div>
           </div>
         </div>
+        <p style={{ marginTop: "24px", fontSize: "10px", fontWeight: "bold" }}>
+          {ROOFWORX_CANCELLATION_NOTICE}
+        </p>
       </div>
     </div>
   );

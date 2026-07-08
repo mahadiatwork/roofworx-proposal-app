@@ -1443,6 +1443,7 @@
   margin: 0;
   text-align: left;
   min-width: 0;
+  white-space: pre-line;
 }
 
 .item-price-pill--client {
