@@ -622,52 +622,6 @@
   overflow: hidden;
 }
 
-.section-footer {
-  padding: 20px 32px 32px;
-}
-
-.section-add-item-dashed {
-  width: 100%;
-  padding: 16px;
-  border: 2px dashed #F3F4F6;
-  border-radius: 14px;
-  background: transparent;
-  color: #9CA3AF;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  transition: 0.2s;
-}
-
-.section-add-item-dashed:hover {
-  border-color: var(--rw-green);
-  color: var(--rw-green);
-  background: #F6FAF8;
-}
-
-.editor-add-section-btn {
-  width: 100%;
-  padding: 20px;
-  border: 2px dashed #EEE;
-  border-radius: 16px;
-  background: #FAFAFA;
-  color: #AAA;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.editor-add-section-btn:hover {
-  border-color: var(--rw-green);
-  color: var(--rw-green);
-  background: #FFFFFF;
-}
-
 /* ════════════════════════════════════════════════════════════════════════════
    Summary Sidebar
    ════════════════════════════════════════════════════════════════════════════ */

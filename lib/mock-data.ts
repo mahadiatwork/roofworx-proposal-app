@@ -114,12 +114,12 @@ function normalizePrice(value: number | string | undefined): number {
 }
 
 import {
+  getProductTemplateDescription,
   ROOFWORX_CONTRACTOR_INTRO,
-  ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION,
 } from "@/lib/terms-and-conditions";
 
 function getCatalogDescription(name: string, fallback: string): string {
-  return /1\s*ct\s*t-?off/i.test(name) ? ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION : fallback;
+  return getProductTemplateDescription(name) ?? fallback;
 }
 
 function mapZohoProductToCatalogItem(product: ZohoProductRecord, index: number): CatalogItem | null {
@@ -142,11 +142,139 @@ function mapZohoProductToCatalogItem(product: ZohoProductRecord, index: number):
 export const CATALOG_ITEMS: CatalogItem[] = [
   {
     id: "cat-1-ct-t-off",
-    name: "1 CT T-OFF",
+    name: "1 - CT T-Off",
     category: "Roofing",
-    description: ROOFWORX_CT_T_OFF_SCOPE_DESCRIPTION,
+    description: getProductTemplateDescription("1 - CT T-Off")!,
     defaultPrice: 0,
     zohoProductId: "MOCK_PROD_1_CT_T_OFF",
+  },
+  {
+    id: "cat-1-1-ct-t-off-insurance",
+    name: "1.1 - CT T-Off - Insurance",
+    category: "Roofing",
+    description: getProductTemplateDescription("1.1 - CT T-Off - Insurance")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_1_1_CT_T_OFF_INSURANCE",
+  },
+  {
+    id: "cat-1-2-ct-garage-t-off",
+    name: "1.2 - CT Garage T-Off",
+    category: "Roofing",
+    description: getProductTemplateDescription("1.2 - CT Garage T-Off")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_1_2_CT_GARAGE_T_OFF",
+  },
+  {
+    id: "cat-1-25-ct-garage-t-off-insurance",
+    name: "1.25 - CT Garage T-Off - Insurance",
+    category: "Roofing",
+    description: getProductTemplateDescription("1.25 - CT Garage T-Off - Insurance")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_1_25_CT_GARAGE_T_OFF_INSURANCE",
+  },
+  {
+    id: "cat-2-gaf-t-off",
+    name: "2 - GAF T-Off",
+    category: "Roofing",
+    description: getProductTemplateDescription("2 - GAF T-Off")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_2_GAF_T_OFF",
+  },
+  {
+    id: "cat-2-1-gaf-t-off-insurance",
+    name: "2.1 - GAF T-Off - Insurance",
+    category: "Roofing",
+    description: getProductTemplateDescription("2.1 - GAF T-Off - Insurance")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_2_1_GAF_T_OFF_INSURANCE",
+  },
+  {
+    id: "cat-2-2-gaf-garage-t-off",
+    name: "2.2 - GAF Garage T-Off",
+    category: "Roofing",
+    description: getProductTemplateDescription("2.2 - GAF Garage T-Off")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_2_2_GAF_GARAGE_T_OFF",
+  },
+  {
+    id: "cat-2-25-gaf-garage-t-off-insurance",
+    name: "2.25 - GAF Garage T-Off - Insurance",
+    category: "Roofing",
+    description: getProductTemplateDescription("2.25 - GAF Garage T-Off - Insurance")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_2_25_GAF_GARAGE_T_OFF_INSURANCE",
+  },
+  {
+    id: "cat-3-flat-roof-membrane",
+    name: "3 - Flat Roof Membrane",
+    category: "Roofing",
+    description: getProductTemplateDescription("3 - Flat Roof Membrane")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_3_FLAT_ROOF_MEMBRANE",
+  },
+  {
+    id: "cat-3-5-flat-roof-epdm",
+    name: "3.5 - Flat Roof EPDM",
+    category: "Roofing",
+    description: getProductTemplateDescription("3.5 - Flat Roof EPDM")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_3_5_FLAT_ROOF_EPDM",
+  },
+  {
+    id: "cat-4-skylights",
+    name: "4 - Skylights",
+    category: "Windows & Skylights",
+    description: getProductTemplateDescription("4 - Skylights")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_4_SKYLIGHTS",
+  },
+  {
+    id: "cat-10-siding",
+    name: "10 - Siding",
+    category: "Siding & Exterior",
+    description: getProductTemplateDescription("10 - Siding")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_10_SIDING",
+  },
+  {
+    id: "cat-11-ct-new-construction",
+    name: "11 - CT New Construction",
+    category: "Roofing",
+    description: getProductTemplateDescription("11 - CT New Construction")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_11_CT_NEW_CONSTRUCTION",
+  },
+  {
+    id: "cat-12-gaf-new-construction",
+    name: "12 - GAF New Construction",
+    category: "Roofing",
+    description: getProductTemplateDescription("12 - GAF New Construction")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_12_GAF_NEW_CONSTRUCTION",
+  },
+  {
+    id: "cat-13-60mil-tpo",
+    name: "13 - 60Mil TPO",
+    category: "Roofing",
+    description: getProductTemplateDescription("13 - 60Mil TPO")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_13_60MIL_TPO",
+  },
+  {
+    id: "cat-14-insurance-elevations",
+    name: "14 - Insurance Elevations",
+    category: "Services",
+    description: getProductTemplateDescription("14 - Insurance Elevations")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_14_INSURANCE_ELEVATIONS",
+  },
+  {
+    id: "cat-15-lp-smartside-siding",
+    name: "15 - LP Smartside Siding",
+    category: "Siding & Exterior",
+    description: getProductTemplateDescription("15 - LP Smartside Siding")!,
+    defaultPrice: 0,
+    zohoProductId: "MOCK_PROD_15_LP_SMARTSIDE_SIDING",
   },
   {
     id: "cat-1",
@@ -156,33 +284,6 @@ export const CATALOG_ITEMS: CatalogItem[] = [
       "Remove damaged shingles and install new architectural shingles over prepared decking",
     defaultPrice: 12500,
     zohoProductId: "MOCK_PROD_1",
-  },
-  {
-    id: "cat-2",
-    name: "Flat Roof Membrane",
-    category: "Roofing",
-    description:
-      "Install new TPO flat roof membrane including all necessary flashing and termination bars",
-    defaultPrice: 8500,
-    zohoProductId: "MOCK_PROD_2",
-  },
-  {
-    id: "cat-3",
-    name: "Garage Tear-Off",
-    category: "Roofing",
-    description:
-      "Complete tear-off of existing garage roof down to the decking. Dispose of all debris.",
-    defaultPrice: 2100,
-    zohoProductId: "MOCK_PROD_3",
-  },
-  {
-    id: "cat-4",
-    name: "Siding",
-    category: "Siding & Exterior",
-    description:
-      "Install new premium vinyl siding including tyvek wrap and all necessary trim pieces",
-    defaultPrice: 15000,
-    zohoProductId: "MOCK_PROD_4",
   },
   {
     id: "cat-5",
@@ -202,14 +303,6 @@ export const CATALOG_ITEMS: CatalogItem[] = [
     zohoProductId: "MOCK_PROD_6",
   },
   {
-    id: "cat-7",
-    name: "Skylights",
-    category: "Windows & Skylights",
-    description: "Install new Velux deck-mounted skylight with flashing kit",
-    defaultPrice: 1800,
-    zohoProductId: "MOCK_PROD_7",
-  },
-  {
     id: "cat-8",
     name: "Skylight Flashing",
     category: "Windows & Skylights",
@@ -225,14 +318,6 @@ export const CATALOG_ITEMS: CatalogItem[] = [
       "Annual roof and gutter maintenance contract (Spring/Fall visits)",
     defaultPrice: 800,
     zohoProductId: "MOCK_PROD_9",
-  },
-  {
-    id: "cat-10",
-    name: "Insurance Elevations",
-    category: "Services",
-    description: "Provide detailed elevation drawings and measurements for insurance claim",
-    defaultPrice: 350,
-    zohoProductId: "MOCK_PROD_10",
   },
 ];
 

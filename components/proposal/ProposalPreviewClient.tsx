@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Check, Mail, MapPin, Phone, Globe, Loader2, ChevronDown } from "lucide-react";
-import { ROOFWORX_TERMS_AND_CONDITIONS } from "@/lib/terms-and-conditions";
+import { getProductProposalTerms } from "@/lib/terms-and-conditions";
 import { useSearchParams } from "next/navigation";
 import type { Proposal, JobMeta } from "./types";
 import { SignatureModal } from "./SignatureModal";
@@ -128,6 +128,8 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     };
 
     const allItems = proposal.sections.flatMap(s => s.lineItems);
+    const productName = allItems.find(item => item.zohoProductId)?.name ?? allItems[0]?.name;
+    const termsAndConditions = getProductProposalTerms(productName).termsAndConditions;
     const requiredTotal = allItems.filter(li => !li.optional).reduce((sum, li) => sum + li.price, 0);
     const selectedOptionalTotal = allItems.filter(li => li.optional && selectedOptionals.has(li.id)).reduce((sum, li) => sum + li.price, 0);
     const grandTotal = Math.max(0, requiredTotal + selectedOptionalTotal - proposal.discount);
@@ -276,7 +278,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                         </button>
                         {termsExpanded && (
                             <div className="preview-terms-body">
-                                <pre className="preview-terms-pre">{ROOFWORX_TERMS_AND_CONDITIONS}</pre>
+                                <pre className="preview-terms-pre">{termsAndConditions}</pre>
                             </div>
                         )}
                     </section>

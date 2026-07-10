@@ -6,9 +6,8 @@ import {
   ROOFWORX_ACCEPTANCE_TEXT,
   ROOFWORX_CANCELLATION_NOTICE,
   ROOFWORX_CONTRACTOR_INTRO,
+  getProductProposalTerms,
   ROOFWORX_PAYMENT_TERMS,
-  ROOFWORX_PROPOSAL_EXPIRATION,
-  ROOFWORX_PROPOSAL_NOTE,
   ROOFWORX_STANDARD_TERMS_NOTICE,
 } from "@/lib/terms-and-conditions";
 
@@ -40,6 +39,10 @@ export function LegacyProposalPDF({
     .reduce((sum, li) => sum + li.price, 0);
 
   const grandTotal = Math.max(0, totalRequired + totalOptional - proposal.discount);
+  const productName = proposal.sections
+    .flatMap((section) => section.lineItems)
+    .find((item) => item.zohoProductId)?.name;
+  const { proposalExpiration, proposalNote } = getProductProposalTerms(productName);
 
   return (
     <div
@@ -125,10 +128,10 @@ export function LegacyProposalPDF({
       {/* ── Fine Print (Red/Bold sections) ────────────────────────── */}
       <div style={{ fontSize: "11px", color: "#333", borderTop: "1px solid black", paddingTop: "15px" }}>
         <p style={{ margin: "8px 0", color: "#d32f2f" }}>
-          <strong>Proposal Expiration:</strong> {ROOFWORX_PROPOSAL_EXPIRATION}
+          <strong>Proposal Expiration:</strong> {proposalExpiration}
         </p>
         <p style={{ margin: "8px 0" }}>
-          <strong>NOTE:</strong> {ROOFWORX_PROPOSAL_NOTE}
+          <strong>NOTE:</strong> {proposalNote}
         </p>
         <p style={{ margin: "8px 0" }}>
           {ROOFWORX_STANDARD_TERMS_NOTICE}

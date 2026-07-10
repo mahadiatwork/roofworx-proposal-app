@@ -8,9 +8,9 @@ import { ProposalHeader, MetaBar } from "@/components/proposal/ProposalHeader";
 import { ProjectCatalog } from "@/components/proposal/ProjectCatalog";
 import { ProposalEditor } from "@/components/proposal/ProposalEditor";
 import { ProposalSummary } from "@/components/proposal/ProposalSummary";
-import { ProposalList } from "@/components/proposal/ProposalList";
 import { PreviewModal } from "@/components/proposal/PreviewModal";
 import { SendProposalModal, type ProposalEmailDraft } from "@/components/proposal/SendProposalModal";
+import { parseProposalItems } from "@/lib/proposal-products";
 import type {
   Proposal,
   JobMeta,
@@ -49,6 +49,7 @@ export function ProposalPageClient({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const selectedProduct = parseProposalItems(proposal)?.productItems[0];
 
   // Determine if we should show the full editor or the selection dashboard
   const hasSelection = !!activeQuoteId || isNewMode;
@@ -68,32 +69,6 @@ export function ProposalPageClient({
   }, []);
 
   // ── Section operations ────────────────────────────────────────────────────
-
-  const handleAddSection = useCallback(() => {
-    const newSection: ProposalSection = {
-      id: uid(),
-      title: "New Section",
-      lineItems: [],
-    };
-    setProposal((p) => ({ ...p, sections: [...p.sections, newSection] }));
-  }, []);
-
-  const handleDuplicateSection = useCallback((sectionId: string) => {
-    setProposal((p) => {
-      const idx = p.sections.findIndex((s) => s.id === sectionId);
-      if (idx === -1) return p;
-      const original = p.sections[idx];
-      const copy: ProposalSection = {
-        ...original,
-        id: uid(),
-        title: `${original.title} (copy)`,
-        lineItems: original.lineItems.map((li) => ({ ...li, id: uid() })),
-      };
-      const sections = [...p.sections];
-      sections.splice(idx + 1, 0, copy);
-      return { ...p, sections };
-    });
-  }, []);
 
   const handleRemoveSection = useCallback((sectionId: string) => {
     setProposal((p) => ({
@@ -116,51 +91,17 @@ export function ProposalPageClient({
 
   // ── Line item operations ──────────────────────────────────────────────────
 
-  const handleAddLineItem = useCallback((sectionId: string) => {
-    const blank: LineItem = {
-      id: uid(),
-      name: "New Item",
-      description: "",
-      price: 0,
-      optional: false,
-    };
-    setProposal((p) => ({
-      ...p,
-      sections: p.sections.map((s) =>
-        s.id === sectionId
-          ? { ...s, lineItems: [...s.lineItems, blank] }
-          : s
-      ),
-    }));
-  }, []);
-
-  const handleDuplicateLineItem = useCallback(
-    (sectionId: string, itemId: string) => {
-      setProposal((p) => ({
-        ...p,
-        sections: p.sections.map((s) => {
-          if (s.id !== sectionId) return s;
-          const idx = s.lineItems.findIndex((li) => li.id === itemId);
-          if (idx === -1) return s;
-          const copy = { ...s.lineItems[idx], id: uid() };
-          const lineItems = [...s.lineItems];
-          lineItems.splice(idx + 1, 0, copy);
-          return { ...s, lineItems };
-        }),
-      }));
-    },
-    []
-  );
-
   const handleRemoveLineItem = useCallback(
     (sectionId: string, itemId: string) => {
       setProposal((p) => ({
         ...p,
-        sections: p.sections.map((s) =>
-          s.id === sectionId
-            ? { ...s, lineItems: s.lineItems.filter((li) => li.id !== itemId) }
-            : s
-        ),
+        sections: p.sections
+          .map((s) =>
+            s.id === sectionId
+              ? { ...s, lineItems: s.lineItems.filter((li) => li.id !== itemId) }
+              : s
+          )
+          .filter((s) => s.lineItems.length > 0),
       }));
     },
     []
@@ -198,6 +139,7 @@ export function ProposalPageClient({
     };
 
     setProposal((p) => {
+      if (parseProposalItems(p)?.productItems.length) return p;
       if (p.sections.length === 0) {
         const newSection: ProposalSection = {
           id: uid(),
@@ -326,7 +268,11 @@ export function ProposalPageClient({
       <div className="page-body">
         <div className="workspace-left-tray">
           {hasSelection && (
-            <ProjectCatalog catalog={catalog} onAddItem={handleAddCatalogItem} />
+            <ProjectCatalog
+              catalog={catalog}
+              onAddItem={handleAddCatalogItem}
+              disabled={Boolean(selectedProduct)}
+            />
           )}
         </div>
 
@@ -338,13 +284,9 @@ export function ProposalPageClient({
               sections={proposal.sections}
               onTitleChange={handleTitleChange}
               onIntroChange={handleIntroChange}
-              onAddSection={handleAddSection}
               onRemoveSection={handleRemoveSection}
-              onDuplicateSection={handleDuplicateSection}
               onRenameSectionTitle={handleRenameSectionTitle}
-              onAddLineItem={handleAddLineItem}
               onRemoveLineItem={handleRemoveLineItem}
-              onDuplicateLineItem={handleDuplicateLineItem}
               onUpdateLineItem={handleUpdateLineItem}
             />
 

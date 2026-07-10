@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { GripVertical, Plus, Trash2, Copy } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import type { ProposalSection, LineItem } from "@/components/proposal/types";
 
 interface ProposalEditorProps {
@@ -10,13 +10,9 @@ interface ProposalEditorProps {
   sections: ProposalSection[];
   onTitleChange: (v: string) => void;
   onIntroChange: (v: string) => void;
-  onAddSection: () => void;
   onRemoveSection: (id: string) => void;
-  onDuplicateSection: (id: string) => void;
   onRenameSectionTitle: (id: string, t: string) => void;
-  onAddLineItem: (id: string) => void;
   onRemoveLineItem: (sid: string, iid: string) => void;
-  onDuplicateLineItem: (sid: string, iid: string) => void;
   onUpdateLineItem: (sid: string, item: LineItem) => void;
 }
 
@@ -45,22 +41,17 @@ export function ProposalEditor(props: ProposalEditorProps) {
             section={sec}
             index={idx}
             onRename={(t: string) => props.onRenameSectionTitle(sec.id, t)}
-            onAdd={() => props.onAddLineItem(sec.id)}
             onRemove={() => props.onRemoveSection(sec.id)}
-            onDuplicate={() => props.onDuplicateSection(sec.id)}
             onRemoveItem={(iid: string) => props.onRemoveLineItem(sec.id, iid)}
             onUpdateItem={(item: LineItem) => props.onUpdateLineItem(sec.id, item)}
           />
         ))}
       </div>
-      <button className="editor-add-section-btn" onClick={props.onAddSection}>
-        <Plus size={16} /> Add Section
-      </button>
     </main>
   );
 }
 
-function SectionCard({ section, index, onRename, onAdd, onRemove, onDuplicate, onRemoveItem, onUpdateItem }: any) {
+function SectionCard({ section, index, onRename, onRemove, onRemoveItem, onUpdateItem }: any) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(section.title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,19 +77,13 @@ function SectionCard({ section, index, onRename, onAdd, onRemove, onDuplicate, o
           </h2>
         )}
         <div className="section-actions">
-          <button className="btn-section-icon" onClick={onDuplicate}><Copy size={13} /></button>
-          <button className="btn-section-icon" onClick={onRemove}><Trash2 size={13} /></button>
+          <button className="btn-section-icon" onClick={onRemove} aria-label={`Remove ${section.title} section`}><Trash2 size={13} /></button>
         </div>
       </div>
       <div className="section-line-items">
         {section.lineItems.map((item: LineItem) => (
           <LineItemRow key={item.id} item={item} onUpdate={onUpdateItem} onRemove={() => onRemoveItem(item.id)} />
         ))}
-      </div>
-      <div className="section-footer">
-        <button className="section-add-item-dashed" onClick={onAdd}>
-          <Plus size={14} /> Add Line Item
-        </button>
       </div>
     </div>
   );
@@ -113,10 +98,11 @@ function LineItemRow({ item, onUpdate, onRemove }: { item: LineItem, onUpdate: (
       <div className="line-item-main">
         <div className="line-item-top">
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input 
-              className="line-item-name-input" 
-              value={item.name} 
-              onChange={(e) => onUpdate({ ...item, name: e.target.value })} 
+            <input
+              className="line-item-name-input"
+              value={item.name}
+              onChange={(e) => onUpdate({ ...item, name: e.target.value })}
+              readOnly={Boolean(item.zohoProductId)}
               disabled={isAccepted}
             />
             {isAccepted && (
@@ -157,6 +143,7 @@ function LineItemRow({ item, onUpdate, onRemove }: { item: LineItem, onUpdate: (
                 style={{ marginLeft: '12px', opacity: isAccepted ? 0.3 : 1 }} 
                 onClick={isAccepted ? undefined : onRemove}
                 disabled={isAccepted}
+                aria-label={`Remove ${item.name}`}
               >
                 <Trash2 size={13} />
               </button>

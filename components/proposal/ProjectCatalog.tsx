@@ -38,9 +38,10 @@ function itemMatchesCategory(item: CatalogItem, filter: CategoryFilter): boolean
 interface ProjectCatalogProps {
   catalog: CatalogItem[];
   onAddItem: (item: CatalogItem) => void;
+  disabled: boolean;
 }
 
-export function ProjectCatalog({ catalog, onAddItem }: ProjectCatalogProps) {
+export function ProjectCatalog({ catalog, onAddItem, disabled }: ProjectCatalogProps) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
 
@@ -66,38 +67,49 @@ export function ProjectCatalog({ catalog, onAddItem }: ProjectCatalogProps) {
         <span className="catalog-title">Scopes of Work</span>
       </div>
 
-      {/* Search */}
-      <div className="catalog-search-wrap">
-        <Search className="catalog-search-icon" size={15} />
-        <input
-          type="text"
-          placeholder="Search projects or items..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="catalog-search-input"
-        />
-      </div>
+      {disabled && (
+        <p role="status" style={{ color: "#8A5A00", fontSize: 12, margin: "0 0 16px" }}>
+          Remove the current product to choose another.
+        </p>
+      )}
 
-      {/* Category Filters */}
-      <div className="catalog-categories">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setActiveCategory(cat)}
-            className={`cat-pill ${activeCategory === cat ? "active" : ""}`}
-          >
-            {cat === "Siding & Exterior" ? "Siding & Exterior" : cat}
-          </button>
-        ))}
-      </div>
+      <fieldset
+        disabled={disabled}
+        style={{ border: 0, margin: 0, minWidth: 0, opacity: disabled ? 0.55 : 1, padding: 0 }}
+      >
+        {/* Search */}
+        <div className="catalog-search-wrap">
+          <Search className="catalog-search-icon" size={15} />
+          <input
+            type="text"
+            placeholder="Search projects or items..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="catalog-search-input"
+          />
+        </div>
 
-      {/* Item List */}
-      <div className="catalog-list">
-        {filtered.map((item) => (
-          <CatalogCard key={item.id} item={item} onAdd={() => onAddItem(item)} />
-        ))}
-      </div>
+        {/* Category Filters */}
+        <div className="catalog-categories">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategory(cat)}
+              className={`cat-pill ${activeCategory === cat ? "active" : ""}`}
+            >
+              {cat === "Siding & Exterior" ? "Siding & Exterior" : cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Item List */}
+        <div className="catalog-list">
+          {filtered.map((item) => (
+            <CatalogCard key={item.id} item={item} onAdd={() => onAddItem(item)} />
+          ))}
+        </div>
+      </fieldset>
     </aside>
   );
 }

@@ -210,7 +210,7 @@ class ZohoCRMClient {
     }
   }
 
-  async searchRecords(moduleName: string, criteria: string) {
+  async searchRecords(moduleName: string, criteria: string, throwOnError = false) {
     try {
       const response = await this.makeRequest<ZohoListResponse<Record<string, unknown>>>(
         'get',
@@ -224,6 +224,7 @@ class ZohoCRMClient {
         `Error searching ${moduleName} records:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
+      if (throwOnError) throw error;
       return [];
     }
   }
@@ -242,6 +243,26 @@ class ZohoCRMClient {
     } catch (error: unknown) {
       console.error(
         `Error updating ${moduleName} record ${recordId}:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      throw error;
+    }
+  }
+
+  async deleteRecord(moduleName: string, recordId: string) {
+    try {
+      const response = await this.makeRequest<{
+        data: Array<{
+          code: string;
+          details: { id: string };
+          message: string;
+          status: string;
+        }>;
+      }>('delete', `/${moduleName}/${recordId}`);
+      return response.data?.[0] || null;
+    } catch (error: unknown) {
+      console.error(
+        `Error deleting ${moduleName} record ${recordId}:`,
         error instanceof Error ? error.message : 'Unknown error'
       );
       throw error;
