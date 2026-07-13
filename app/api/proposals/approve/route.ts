@@ -7,11 +7,17 @@ export async function POST(req: NextRequest) {
     const quoteId = formData.get("quoteId") as string;
     const jobId = formData.get("jobId") as string;
     const signatureBase64 = formData.get("signature") as string;
-    const pdfFile = formData.get("pdf") as File;
 
     if (!quoteId || !jobId) {
       return NextResponse.json(
         { success: false, error: "Missing quoteId or jobId" },
+        { status: 400 }
+      );
+    }
+
+    if (formData.get("agreementAccepted") !== "true") {
+      return NextResponse.json(
+        { success: false, error: "Terms and deposit acknowledgment are required." },
         { status: 400 }
       );
     }
@@ -32,15 +38,7 @@ export async function POST(req: NextRequest) {
         console.log("💾 Signature attached to record");
       }
 
-      // 2. Upload PDF to Zoho
-      if (pdfFile) {
-        const pdfArrayBuffer = await pdfFile.arrayBuffer();
-        const pdfBuffer = Buffer.from(pdfArrayBuffer);
-        await zohoClient.uploadAttachment("New_Quotes", quoteId, pdfBuffer, pdfFile.name || "Proposal.pdf");
-        console.log("📄 PDF attached to record");
-      }
-
-      // 3. Update Optional items to "Accepted"
+      // 2. Update Optional items to "Accepted"
       const selectedOptionalsStr = formData.get("selectedOptionals") as string;
       if (selectedOptionalsStr) {
         const selectedIds = JSON.parse(selectedOptionalsStr) as string[];
@@ -56,7 +54,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Proposal approved and files attached.",
+        message: "Proposal approved.",
         quoteId,
       });
 

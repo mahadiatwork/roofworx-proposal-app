@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, FileEdit, ChevronRight } from "lucide-react";
@@ -10,7 +10,7 @@ import { ProposalEditor } from "@/components/proposal/ProposalEditor";
 import { ProposalSummary } from "@/components/proposal/ProposalSummary";
 import { PreviewModal } from "@/components/proposal/PreviewModal";
 import { SendProposalModal, type ProposalEmailDraft } from "@/components/proposal/SendProposalModal";
-import { parseProposalItems } from "@/lib/proposal-products";
+import { OPTION_ITEMS } from "@/lib/mock-data";
 import type {
   Proposal,
   JobMeta,
@@ -46,10 +46,14 @@ export function ProposalPageClient({
 
   const [proposal, setProposal] = useState<Proposal>(initialProposal);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved" | "error">("saved");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const selectedProduct = parseProposalItems(proposal)?.productItems[0];
+
+  // Track the last successfully saved proposal so auto-save only fires on real changes.
+  const lastSavedProposalRef = useRef<Proposal>(initialProposal);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Determine if we should show the full editor or the selection dashboard
   const hasSelection = !!activeQuoteId || isNewMode;
@@ -128,7 +132,7 @@ export function ProposalPageClient({
 
   // ── Catalog add ───────────────────────────────────────────────────────────
 
-  const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
+const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
     const newLineItem: LineItem = {
       id: uid(),
       name: catalogItem.name,
@@ -139,7 +143,14 @@ export function ProposalPageClient({
     };
 
     setProposal((p) => {
-      if (parseProposalItems(p)?.productItems.length) return p;
+      // Templates may be selected multiple times — each gets its own section
+      // keyed off the template name so the editor's per-product narrative is
+      // preserved rather than merged into a single section.
+      if (p.sections.some((s) =>
+        s.lineItems.some((li) => li.zohoProductId === catalogItem.zohoProductId && catalogItem.zohoProductId)
+      )) {
+        return p;
+      }
       if (p.sections.length === 0) {
         const newSection: ProposalSection = {
           id: uid(),
@@ -157,57 +168,175 @@ export function ProposalPageClient({
     });
   }, []);
 
+  // Add an "Options" catalog item as an optional line item. Options are never
+  // tied to a Zoho product (empty zohoProductId) so the quote's one-product limit
+  // still applies only to the main scope-of-work template. They are always
+  // addable, even after a main product has been selected.
+  const handleAddOptionItem = useCallback((catalogItem: CatalogItem) => {
+    const newLineItem: LineItem = {
+      id: uid(),
+      name: catalogItem.name,
+      description: catalogItem.description,
+      price: catalogItem.defaultPrice,
+      optional: true,
+      purchaseOption: "Optional",
+      zohoProductId: catalogItem.zohoProductId,
+    };
+
+    setProposal((p) => {
+      // Reuse an existing "Options" section if present, otherwise create one.
+      const existingIdx = p.sections.findIndex(
+        (s) => s.title.trim().toLowerCase() === "options"
+      );
+      if (existingIdx >= 0) {
+        const section = p.sections[existingIdx];
+        if (
+          section.lineItems.some(
+            (li) =>
+              (catalogItem.zohoProductId && li.zohoProductId === catalogItem.zohoProductId) ||
+              li.name === catalogItem.name
+          )
+        ) {
+          return p;
+        }
+        const sections = [...p.sections];
+        sections[existingIdx] = {
+          ...section,
+          lineItems: [...section.lineItems, newLineItem],
+        };
+        return { ...p, sections };
+      }
+      const optionsSection: ProposalSection = {
+        id: uid(),
+        title: "Options",
+        lineItems: [newLineItem],
+      };
+      return { ...p, sections: [...p.sections, optionsSection] };
+    });
+  }, []);
+
   // ── Global actions ────────────────────────────────────────────────────────
 
-  const handleSaveDraft = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      const response = await fetch("/api/proposals/save-draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId,
-          proposal,
-          jobMeta,
-        }),
-      });
+  // Core save routine used by both manual Save Draft and auto-save.
+  const saveDraft = useCallback(
+    async ({
+      silent,
+      updateUrl,
+    }: {
+      silent: boolean;
+      updateUrl: boolean;
+    }): Promise<string | null> => {
+      if (isSaving) return null;
+      setIsSaving(true);
+      setSaveStatus("saving");
+      try {
+        const response = await fetch("/api/proposals/save-draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId,
+            proposal,
+            jobMeta,
+          }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to save draft");
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to save draft");
+        }
+
+        console.log(`✅ Draft saved successfully to Zoho CRM. Quote ID: ${data.quoteId}`);
+
+        const savedProposal: Proposal = {
+          ...proposal,
+          id: data.quoteId,
+          status: "draft",
+          lastEditedAt: data.savedAt || new Date().toISOString(),
+        };
+        lastSavedProposalRef.current = savedProposal;
+        setProposal(savedProposal);
+        setSaveStatus("saved");
+
+        if (updateUrl) {
+          router.replace(`/proposal/${jobId}?quoteId=${encodeURIComponent(data.quoteId)}`);
+        }
+
+        return data.quoteId as string;
+      } catch (error: any) {
+        console.error("❌ Error saving draft:", error);
+        setSaveStatus("error");
+        if (!silent) {
+          toast.error(`Failed to save draft: ${error.message}`);
+        }
+        return null;
+      } finally {
+        setIsSaving(false);
       }
+    },
+    [jobId, proposal, jobMeta, router, isSaving]
+  );
 
-      console.log(`✅ Draft saved successfully to Zoho CRM. Quote ID: ${data.quoteId}`);
-      
-      setProposal((p) => ({ 
-        ...p, 
-        id: data.quoteId,
-        status: "draft",
-        lastEditedAt: data.savedAt || new Date().toISOString() 
-      }));
-      router.replace(`/proposal/${jobId}?quoteId=${encodeURIComponent(data.quoteId)}`);
-      
-    } catch (error: any) {
-      console.error("❌ Error saving draft:", error);
-      toast.error(`Failed to save draft: ${error.message}`);
-    } finally {
-      setIsSaving(false);
+  const handleSaveDraft = useCallback(() => {
+    return saveDraft({ silent: false, updateUrl: true });
+  }, [saveDraft]);
+
+  // Google Docs–style auto-save: watch for changes and debounce a save.
+  useEffect(() => {
+    if (!hasSelection) return;
+    if (JSON.stringify(proposal) === JSON.stringify(lastSavedProposalRef.current)) {
+      setSaveStatus("saved");
+      return;
     }
-  }, [jobId, proposal, jobMeta, router]);
+
+    setSaveStatus("unsaved");
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      saveDraft({ silent: true, updateUrl: false });
+    }, 5000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [proposal, hasSelection, saveDraft]);
+
+  // Warn the user if they try to close the tab with unsaved changes.
+  useEffect(() => {
+    if (saveStatus !== "unsaved" && saveStatus !== "error") return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saveStatus]);
 
   const handlePreview = useCallback(() => {
     setIsPreviewOpen(true);
   }, []);
 
-  const handleSend = useCallback(() => {
-    // 1. Ensure we have a saved quote id
-    if (!activeQuoteId && proposal.id.startsWith("new-")) {
+  const handleSend = useCallback(async () => {
+    // 1. Ensure we have a saved quote id. If the proposal is still brand-new,
+    // run an immediate auto-save first so the rep isn't blocked.
+    let quoteId = proposal.id;
+    if (quoteId.startsWith("new-")) {
+      quoteId = (await saveDraft({ silent: true, updateUrl: true })) ?? quoteId;
+    }
+
+    if (quoteId.startsWith("new-")) {
       toast.warning("Save your proposal as a draft before sending it to the client.");
       return;
     }
     setIsSendModalOpen(true);
-  }, [activeQuoteId, proposal.id]);
+  }, [proposal.id, saveDraft]);
 
   const handleConfirmSend = useCallback(async (draft: ProposalEmailDraft) => {
     setIsSending(true);
@@ -260,6 +389,7 @@ export function ProposalPageClient({
         onSend={handleSend}
         onBack={handleBack}
         isSaving={isSaving}
+        saveStatus={saveStatus}
         isEditMode={!proposal.id.startsWith("new-")}
         hasSelection={hasSelection}
       />
@@ -268,10 +398,11 @@ export function ProposalPageClient({
       <div className="page-body">
         <div className="workspace-left-tray">
           {hasSelection && (
-            <ProjectCatalog
+<ProjectCatalog
               catalog={catalog}
+              options={OPTION_ITEMS}
               onAddItem={handleAddCatalogItem}
-              disabled={Boolean(selectedProduct)}
+              onAddOption={handleAddOptionItem}
             />
           )}
         </div>
@@ -359,7 +490,7 @@ export function ProposalPageClient({
         proposal={proposal}
         jobMeta={jobMeta}
       />
-      {isSendModalOpen && (activeQuoteId || !proposal.id.startsWith("new-")) && (
+      {isSendModalOpen && (
         <SendProposalModal
           isOpen={isSendModalOpen}
           onClose={() => setIsSendModalOpen(false)}

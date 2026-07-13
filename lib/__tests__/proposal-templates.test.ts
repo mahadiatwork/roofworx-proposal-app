@@ -3,14 +3,16 @@ import test from "node:test";
 import {
   getProductProposalTerms,
   getProductTemplateDescription,
+  stripLegacyTemplateOptions,
 } from "../terms-and-conditions.ts";
 
 test("maps each supplied product code to its own DOCX template", () => {
-  assert.match(getProductTemplateDescription("1 - CT T-Off")!, /CertainTeed 4-Star/);
+  assert.doesNotMatch(getProductTemplateDescription("1 - CT T-Off")!, /CertainTeed 4-Star/);
   assert.match(getProductTemplateDescription("1.1 - CT T-Off - Insurance")!, /insurance deductible/);
   assert.match(getProductTemplateDescription("1.2 CT GARAGE T-off")!, /entire garage/);
   assert.match(getProductTemplateDescription("1.25 - CT GARAGET-Off - Insurance")!, /adjustor summary sheet/);
   assert.match(getProductTemplateDescription("2 GAF T-Off")!, /Timberline HDZ/);
+  assert.doesNotMatch(getProductTemplateDescription("2 GAF T-Off")!, /GAF (?:Silver|Golden) Pledge/);
   assert.match(getProductTemplateDescription("2.1 - GAF T-Off - Insurance")!, /Supplement requested/);
   assert.match(getProductTemplateDescription("2.2 - GAF GARAGE T-Off")!, /GAF FeltBuster/);
   assert.match(getProductTemplateDescription("2.25 - GAF GARAGE T-Off - Insurance")!, /insurance company/);
@@ -36,4 +38,19 @@ test("maps each supplied product code to its own DOCX template", () => {
   assert.match(getProductProposalTerms("3.5 - Flat Roof EPDM").proposalNote, /up to two \(2\) layers/);
   assert.match(getProductProposalTerms("4 - Skylights").proposalExpiration, /industry, we/);
   assert.doesNotMatch(getProductProposalTerms("15 - LP Smartside Siding").proposalNote, /removal of/);
+  const terms = getProductProposalTerms("1 - CT T-Off").termsAndConditions;
+  assert.match(terms, /1\. PARTIES AND SCOPE OF WORK/);
+  assert.match(terms, /15\. INDEMNIFICATION/);
+  assert.match(terms, /50% DEPOSIT IS DUE UPON EXECUTION/);
+});
+
+test("removes legacy embedded options from saved template descriptions", () => {
+  assert.equal(
+    stripLegacyTemplateOptions("Scope\n\nOPTION:\n- CertainTeed 4-Star"),
+    "Scope"
+  );
+  assert.equal(
+    stripLegacyTemplateOptions("Scope\r\n\r\nOPTIONS:\r\n- Silver\r\n- Golden"),
+    "Scope"
+  );
 });

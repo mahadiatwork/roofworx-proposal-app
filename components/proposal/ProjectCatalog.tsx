@@ -5,111 +5,97 @@ import { Search, Plus, Archive } from "lucide-react";
 import type { CatalogItem } from "@/components/proposal/types";
 import { sortCatalogByScopeOrder } from "@/lib/catalog-order";
 
-const CATEGORIES = [
-  "All",
-  "Roofing",
-  "Siding & Exterior",
-  "Gutters",
-  "Windows & Skylights",
-] as const;
-
-type CategoryFilter = (typeof CATEGORIES)[number];
-
-function itemMatchesCategory(item: CatalogItem, filter: CategoryFilter): boolean {
-  if (filter === "All") return true;
-  const ic = item.category.trim().toLowerCase();
-  const fc = filter.toLowerCase();
-  if (ic === fc) return true;
-  // CRM may use alternate labels; keep filter pills working with real Zoho values.
-  if (filter === "Siding & Exterior") {
-    return (
-      ic === "siding & exterior" ||
-      ic === "siding and exterior" ||
-      ic === "siding" ||
-      ic.startsWith("siding ")
-    );
-  }
-  if (filter === "Roofing") {
-    return ic === "roofing";
-  }
-  return ic === fc;
-}
+type CatalogTab = "templates" | "options";
 
 interface ProjectCatalogProps {
   catalog: CatalogItem[];
+  options: CatalogItem[];
   onAddItem: (item: CatalogItem) => void;
-  disabled: boolean;
+  onAddOption: (item: CatalogItem) => void;
 }
 
-export function ProjectCatalog({ catalog, onAddItem, disabled }: ProjectCatalogProps) {
+export function ProjectCatalog({
+  catalog,
+  options,
+  onAddItem,
+  onAddOption,
+}: ProjectCatalogProps) {
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
+  const [tab, setTab] = useState<CatalogTab>("templates");
 
   const sortedCatalog = useMemo(() => sortCatalogByScopeOrder(catalog), [catalog]);
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    const list = sortedCatalog.filter((item) => {
-      const matchesQuery =
-        !q ||
+  const q = query.toLowerCase().trim();
+
+  const filteredTemplates = useMemo(() => {
+    if (!q) return sortedCatalog;
+    return sortedCatalog.filter(
+      (item) =>
         item.name.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q);
-      return matchesQuery && itemMatchesCategory(item, activeCategory);
-    });
-    return list;
-  }, [sortedCatalog, query, activeCategory]);
+        item.category.toLowerCase().includes(q)
+    );
+  }, [sortedCatalog, q]);
+
+  const filteredOptions = useMemo(() => {
+    if (!q) return options;
+    return options.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q)
+    );
+  }, [options, q]);
 
   return (
     <aside className="catalog-panel">
       {/* Header */}
       <div className="catalog-header">
         <Archive size={16} className="catalog-icon" />
-        <span className="catalog-title">Scopes of Work</span>
+        <span className="catalog-title">Catalog</span>
       </div>
 
-      {disabled && (
-        <p role="status" style={{ color: "#8A5A00", fontSize: 12, margin: "0 0 16px" }}>
-          Remove the current product to choose another.
-        </p>
-      )}
+      {/* Templates / Options tabs (replaces scope-of-work category filter) */}
+      <div className="catalog-categories">
+        <button
+          type="button"
+          onClick={() => setTab("templates")}
+          className={`cat-pill ${tab === "templates" ? "active" : ""}`}
+        >
+          Templates
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("options")}
+          className={`cat-pill ${tab === "options" ? "active" : ""}`}
+        >
+          Options
+        </button>
+      </div>
 
-      <fieldset
-        disabled={disabled}
-        style={{ border: 0, margin: 0, minWidth: 0, opacity: disabled ? 0.55 : 1, padding: 0 }}
-      >
-        {/* Search */}
-        <div className="catalog-search-wrap">
-          <Search className="catalog-search-icon" size={15} />
-          <input
-            type="text"
-            placeholder="Search projects or items..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="catalog-search-input"
-          />
-        </div>
+      {/* Search */}
+      <div className="catalog-search-wrap">
+        <Search className="catalog-search-icon" size={15} />
+        <input
+          type="text"
+          placeholder={tab === "templates" ? "Search templates..." : "Search options..."}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="catalog-search-input"
+        />
+      </div>
 
-        {/* Category Filters */}
-        <div className="catalog-categories">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`cat-pill ${activeCategory === cat ? "active" : ""}`}
-            >
-              {cat === "Siding & Exterior" ? "Siding & Exterior" : cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Item List */}
+      {tab === "templates" ? (
         <div className="catalog-list">
-          {filtered.map((item) => (
+          {filteredTemplates.map((item) => (
             <CatalogCard key={item.id} item={item} onAdd={() => onAddItem(item)} />
           ))}
         </div>
-      </fieldset>
+      ) : (
+        <div className="catalog-list">
+          {filteredOptions.map((item) => (
+            <CatalogCard key={item.id} item={item} onAdd={() => onAddOption(item)} />
+          ))}
+        </div>
+      )}
     </aside>
   );
 }

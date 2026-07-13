@@ -31,13 +31,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (parsedItems.productItems.length > 1) {
-      return NextResponse.json(
-        { success: false, error: "An estimate can contain only one product" },
-        { status: 400 }
-      );
-    }
-
     const jobId = requestBody.jobId.trim();
     const existingQuoteId =
       typeof proposal.id === "string" &&
@@ -93,65 +86,87 @@ export async function POST(request: Request) {
       quoteId = response.details.id;
     }
 
-    const product = parsedItems.productItems[0];
-    const relationshipPayload = product
-      ? {
-          Quotes: quoteId,
-          Products: product.zohoProductId.trim(),
-          Pricing: product.price,
-          Quantity: 1,
-          Product_Description: product.description,
-          Purchase_Option:
-            product.purchaseOption === "Accepted"
-              ? "Accepted"
-              : product.optional
-                ? "Optional"
-                : "Mandatory",
-        }
-      : null;
+    // Build one relationship payload per selected product. An estimate may now
+    // include multiple products, so we create/update each and delete orphans.
+    const relationshipPayloads = parsedItems.productItems.map((product) => ({
+      Quotes: quoteId,
+      Products: product.zohoProductId.trim(),
+      Pricing: product.price,
+      Quantity: 1,
+      Product_Description: product.description,
+      Purchase_Option:
+        product.purchaseOption === "Accepted"
+          ? "Accepted"
+          : product.optional
+            ? "Optional"
+            : "Mandatory",
+    }));
 
+    // Match incoming payloads to existing relationships by their line-item id
+    // (passed through as `id` on the ProposalItemPayload → `record.id` mapping
+    // would be wrong; Zoho relationship ids differ). Match instead by stable
+    // zohoProductId + position so updates reuse the right record.
+    const keeperIds = new Set<string>();
     let createdCount = 0;
     let updatedCount = 0;
     let deletedCount = 0;
 
     if (!existingQuoteId) {
-      if (relationshipPayload) {
-        const response = await zohoClient.createRecord("Product_X_Quotes", relationshipPayload);
+      for (const payload of relationshipPayloads) {
+        const response = await zohoClient.createRecord("Product_X_Quotes", payload);
         if (!response || response.status !== "success") {
           throw new Error("Failed to create product relationship");
         }
-        createdCount = 1;
+        createdCount++;
       }
     } else {
-      const preferredRelationshipId = typeof product?.id === "string" ? product.id : null;
-      const keeper = relationshipPayload
-        ? existingRelationships.find((record) => record.id === preferredRelationshipId) ??
-          existingRelationships[0]
-        : undefined;
-
-      if (relationshipPayload && keeper) {
-        const response = await zohoClient.updateRecord(
-          "Product_X_Quotes",
-          keeper.id,
-          relationshipPayload
-        );
-        if (!response || response.status !== "success") {
-          throw new Error("Failed to update product relationship");
+      // Bucket existing relationships by their linked Zoho product id so we can
+      // reuse one record per (zohoProductId) occurrence.
+      const existingByProduct = new Map<string, RelationshipRecord[]>();
+      for (const record of existingRelationships) {
+        const productId =
+          typeof record.Products === "string"
+            ? record.Products
+            : record.Products &&
+                typeof record.Products === "object" &&
+                !Array.isArray(record.Products)
+              ? (record.Products as { id?: unknown }).id
+              : undefined;
+        if (typeof productId === "string") {
+          const list = existingByProduct.get(productId) ?? [];
+          list.push(record);
+          existingByProduct.set(productId, list);
         }
-        updatedCount = 1;
-      } else if (relationshipPayload) {
-        const response = await zohoClient.createRecord("Product_X_Quotes", relationshipPayload);
-        if (!response || response.status !== "success") {
-          throw new Error("Failed to create product relationship");
-        }
-        createdCount = 1;
       }
 
-      const staleRelationships = keeper
-        ? existingRelationships.filter((record) => record.id !== keeper.id)
-        : existingRelationships;
-      for (const stale of staleRelationships) {
-        const response = await zohoClient.deleteRecord("Product_X_Quotes", stale.id);
+      for (const payload of relationshipPayloads) {
+        const bucket = existingByProduct.get(payload.Products);
+        const keeper = bucket?.shift();
+        if (bucket && bucket.length === 0) existingByProduct.delete(payload.Products);
+
+        if (keeper) {
+          keeperIds.add(keeper.id);
+          const response = await zohoClient.updateRecord(
+            "Product_X_Quotes",
+            keeper.id,
+            payload
+          );
+          if (!response || response.status !== "success") {
+            throw new Error("Failed to update product relationship");
+          }
+          updatedCount++;
+        } else {
+          const response = await zohoClient.createRecord("Product_X_Quotes", payload);
+          if (!response || response.status !== "success") {
+            throw new Error("Failed to create product relationship");
+          }
+          createdCount++;
+        }
+      }
+
+      for (const record of existingRelationships) {
+        if (keeperIds.has(record.id)) continue;
+        const response = await zohoClient.deleteRecord("Product_X_Quotes", record.id);
         if (!response || response.status !== "success") {
           throw new Error("Failed to remove old product relationship");
         }

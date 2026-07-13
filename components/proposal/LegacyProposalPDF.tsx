@@ -15,12 +15,14 @@ interface LegacyProposalPDFProps {
   proposal: Proposal;
   jobMeta: JobMeta;
   signatureData?: string;
+  selectedOptionals?: Set<string>;
 }
 
 export function LegacyProposalPDF({
   proposal,
   jobMeta,
   signatureData,
+  selectedOptionals = new Set<string>(),
 }: LegacyProposalPDFProps) {
   const today = new Date().toLocaleDateString("en-US", {
     month: "2-digit",
@@ -28,20 +30,19 @@ export function LegacyProposalPDF({
     year: "numeric",
   });
 
-  const totalRequired = proposal.sections
-    .flatMap((s) => s.lineItems)
-    .filter((li) => !li.optional)
+  const allItems = proposal.sections.flatMap((s) => s.lineItems);
+  const requiredItems = allItems.filter((li) => !li.optional);
+  const optionalItems = allItems.filter((li) => li.optional);
+
+  const totalRequired = requiredItems.reduce((sum, li) => sum + li.price, 0);
+  const totalSelectedOptional = optionalItems
+    .filter((li) => selectedOptionals.has(li.id))
     .reduce((sum, li) => sum + li.price, 0);
 
-  const totalOptional = proposal.sections
-    .flatMap((s) => s.lineItems)
-    .filter((li) => li.optional)
-    .reduce((sum, li) => sum + li.price, 0);
-
-  const grandTotal = Math.max(0, totalRequired + totalOptional - proposal.discount);
-  const productName = proposal.sections
-    .flatMap((section) => section.lineItems)
-    .find((item) => item.zohoProductId)?.name;
+  const grandTotal = Math.max(0, totalRequired + totalSelectedOptional - proposal.discount);
+  const productName =
+    allItems.find((item) => item.zohoProductId && !item.optional)?.name ??
+    allItems.find((item) => item.zohoProductId)?.name;
   const { proposalExpiration, proposalNote } = getProductProposalTerms(productName);
 
   return (
@@ -79,24 +80,25 @@ export function LegacyProposalPDF({
       {/* ── Client / Job Site Boxes ───────────────────────────────── */}
       <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         <div style={{ flex: 1, border: "1px solid black", padding: "10px" }}>
-          <div style={{ fontWeight: "bold", borderBottom: "1px solid black", marginBottom: "8px", paddingBottom: "4px" }}>
-            Proposal Submitted To: ("Customer")
+          <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
+            Proposal Submitted To: (&quot;Customer&quot;)
           </div>
-          <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
+          <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
             <p style={{ margin: "2px 0" }}><strong>Name:</strong> {jobMeta.contactName}</p>
-            <p style={{ margin: "2px 0" }}><strong>Street:</strong> {jobMeta.propertyAddress.split(",")[0]}</p>
-            <p style={{ margin: "2px 0" }}><strong>City:</strong> {jobMeta.propertyAddress.split(",")[1]?.trim() || ""}</p>
+            <p style={{ margin: "2px 0" }}><strong>Street:</strong> {jobMeta.propertyAddress}</p>
+            <p style={{ margin: "2px 0" }}><strong>City, State ZIP:</strong> {jobMeta.propertyCity}{jobMeta.propertyCity && jobMeta.propertyState ? ", " : ""}{jobMeta.propertyState} {jobMeta.propertyZip}</p>
             <p style={{ margin: "2px 0" }}><strong>Phone:</strong> (555) 123-4567</p>
             <p style={{ margin: "2px 0" }}><strong>Email:</strong> {jobMeta.contactEmail}</p>
           </div>
         </div>
         <div style={{ flex: 1, border: "1px solid black", padding: "10px" }}>
-          <div style={{ fontWeight: "bold", borderBottom: "1px solid black", marginBottom: "8px", paddingBottom: "4px" }}>
+          <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
             Job Site:
           </div>
-          <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
+          <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
             <p style={{ margin: "2px 0" }}><strong>Name:</strong> {jobMeta.accountName}</p>
             <p style={{ margin: "2px 0" }}><strong>Street:</strong> {jobMeta.propertyAddress}</p>
+            <p style={{ margin: "2px 0" }}><strong>City, State ZIP:</strong> {jobMeta.propertyCity}{jobMeta.propertyCity && jobMeta.propertyState ? ", " : ""}{jobMeta.propertyState} {jobMeta.propertyZip}</p>
             <p style={{ margin: "2px 0" }}><strong>Property Class:</strong> {jobMeta.propertyClass}</p>
           </div>
         </div>
@@ -109,10 +111,11 @@ export function LegacyProposalPDF({
 
       {/* ── Scope of Work (customer-facing: descriptions only, no scope codes/titles) ── */}
       <div style={{ fontSize: "12px", marginBottom: "30px" }}>
-        {proposal.sections.map((section) => (
-          <div key={section.id} style={{ marginBottom: "15px" }}>
+        {/* Required items */}
+        {requiredItems.length > 0 && (
+          <div style={{ marginBottom: "20px" }}>
             <ol style={{ paddingLeft: "20px", margin: "0" }}>
-              {section.lineItems.map((item) => (
+              {requiredItems.map((item) => (
                 <li key={item.id} style={{ marginBottom: "6px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
                     <span style={{ whiteSpace: "pre-line" }}>{item.description || "—"}</span>
@@ -122,7 +125,41 @@ export function LegacyProposalPDF({
               ))}
             </ol>
           </div>
-        ))}
+        )}
+
+        {/* Optional items — rendered as a separate OPTION block with initials line */}
+        {optionalItems.length > 0 && (
+          <div style={{ marginTop: "20px" }}>
+            <div
+              style={{
+                display: "inline-block",
+                background: "#1A56DB",
+                color: "white",
+                fontWeight: "bold",
+                fontSize: "11px",
+                letterSpacing: "0.05em",
+                padding: "3px 10px",
+                marginBottom: "10px",
+                textTransform: "uppercase",
+              }}
+            >
+              OPTION:
+            </div>
+            <ul style={{ paddingLeft: "20px", margin: "0", listStyleType: "disc" }}>
+              {optionalItems.map((item) => (
+                <li key={item.id} style={{ marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-end" }}>
+                    <span style={{ whiteSpace: "pre-line" }}>
+                      {item.description || "—"}{" "}
+                      <span style={{ color: "#666" }}>_____ please initial</span>
+                    </span>
+                    <span style={{ fontWeight: "bold", flexShrink: 0 }}>${item.price.toLocaleString()}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* ── Fine Print (Red/Bold sections) ────────────────────────── */}
@@ -156,36 +193,58 @@ export function LegacyProposalPDF({
           {ROOFWORX_ACCEPTANCE_TEXT}
         </p>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "30px" }}>
+          {/* Customer signature box */}
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "40px" }}>CUSTOMER:</p>
-            <div style={{ position: "relative", width: "250px", borderBottom: "1px solid black" }}>
+            <p style={{ fontSize: "12px", fontWeight: "bold", margin: "0 0 8px 0" }}>CUSTOMER:</p>
+            <div
+              style={{
+                position: "relative",
+                height: "60px",
+                border: "1px solid black",
+                marginBottom: "6px",
+                background: "white",
+              }}
+            >
               {signatureData && (
-                <img 
-                  src={signatureData} 
-                  alt="Customer Signature" 
-                  style={{ 
-                    position: "absolute", 
-                    bottom: "2px", 
-                    left: "20px", 
-                    height: "60px",
-                    mixBlendMode: "multiply"
-                  }} 
+                <img
+                  src={signatureData}
+                  alt="Customer Signature"
+                  style={{
+                    position: "absolute",
+                    bottom: "2px",
+                    left: "20px",
+                    height: "55px",
+                    mixBlendMode: "multiply",
+                  }}
                 />
               )}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px", fontSize: "11px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
               <span>Signature (Name: {jobMeta.contactName})</span>
               <span>Date: {today}</span>
             </div>
           </div>
 
-          <div style={{ flex: 1, paddingLeft: "40px" }}>
-            <p style={{ fontSize: "14px", fontWeight: "bold", marginBottom: "10px" }}>ROOF WORX EXTERIORS, INC.</p>
-            <div style={{ fontSize: "13px" }}>
-              <p style={{ margin: "4px 0" }}>By: _________________________</p>
-              <p style={{ margin: "4px 0" }}>Name: Ashley Biggs</p>
-              <p style={{ margin: "4px 0" }}>Title: President</p>
+          {/* Company signature box */}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: "12px", fontWeight: "bold", margin: "0 0 8px 0" }}>ROOF WORX EXTERIORS, INC.:</p>
+            <div
+              style={{
+                position: "relative",
+                height: "60px",
+                border: "1px solid black",
+                marginBottom: "6px",
+                background: "white",
+              }}
+            >
+              <div style={{ position: "absolute", bottom: "4px", left: "10px", fontSize: "12px", color: "#666" }}>
+                By: _________________________
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+              <span>Name: Ashley Biggs</span>
+              <span>Title: President</span>
             </div>
           </div>
         </div>

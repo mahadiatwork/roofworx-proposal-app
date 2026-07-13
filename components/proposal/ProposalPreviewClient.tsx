@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, Mail, MapPin, Phone, Globe, Loader2, ChevronDown } from "lucide-react";
+import { Check, Mail, MapPin, Phone, Globe, Loader2 } from "lucide-react";
 import { getProductProposalTerms } from "@/lib/terms-and-conditions";
 import { useSearchParams } from "next/navigation";
 import type { Proposal, JobMeta } from "./types";
 import { SignatureModal } from "./SignatureModal";
-import { LegacyProposalPDF } from "./LegacyProposalPDF";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 interface ProposalPreviewProps {
     proposal: Proposal;
@@ -32,8 +29,6 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     const [isApproving, setIsApproving] = useState(false);
     const [isApproved, setIsApproved] = useState(proposal.status === 'approved' || (proposal as any).status === 'Accepted');
     const [isSigModalOpen, setIsSigModalOpen] = useState(false);
-    const [signatureData, setSignatureData] = useState<string | undefined>(undefined);
-    const [termsExpanded, setTermsExpanded] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     const toggleOptional = (id: string) => {
@@ -49,7 +44,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
 
     const handleApprove = () => {
         if (!agreedToTerms) {
-            alert("Please read and agree to the Terms & Conditions before approving.");
+            alert("Please accept the Terms & Conditions and acknowledge the 50% deposit before signing.");
             return;
         }
         const quoteId = searchParams?.get('quoteId') || proposal.id;
@@ -61,51 +56,17 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     };
 
     const handleConfirmSignature = async (base64: string) => {
-        setSignatureData(base64);
         setIsSigModalOpen(false);
         setIsApproving(true);
 
         try {
-            // Give time for state to update so signature is in the hidden PDF div
-            await new Promise(r => setTimeout(r, 800));
-            
-            // 1. Generate the Legacy PDF
-            const element = document.getElementById('legacy-proposal-pdf');
-            if (!element) throw new Error("PDF component not found");
-
-            // Reduced scale and JPEG compression to keep payload under Vercel limits (4.5MB)
-            const canvas = await html2canvas(element, { 
-                scale: 1.5, 
-                logging: false,
-                useCORS: true,
-                allowTaint: true
-            });
-            
-            const imgData = canvas.toDataURL('image/jpeg', 0.75); // Use JPEG 75% for significantly smaller size than PNG
-            
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-            });
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            
-            // Add image as JPEG with compression
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-            
-            const pdfBlob = pdf.output('blob');
             const quoteId = searchParams?.get('quoteId') || proposal.id;
-
-            // 2. Upload to CRM
             const formData = new FormData();
             formData.append('quoteId', quoteId!);
             formData.append('jobId', jobMeta.recipientId);
             formData.append('signature', base64);
-            formData.append('pdf', pdfBlob, `Proposal-${jobMeta.proposalNumber}.pdf`);
             formData.append('selectedOptionals', JSON.stringify(Array.from(selectedOptionals)));
+            formData.append('agreementAccepted', String(agreedToTerms));
 
             const res = await fetch("/api/proposals/approve", {
                 method: "POST",
@@ -128,10 +89,14 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     };
 
     const allItems = proposal.sections.flatMap(s => s.lineItems);
-    const productName = allItems.find(item => item.zohoProductId)?.name ?? allItems[0]?.name;
+    const requiredItems = allItems.filter(li => !li.optional);
+    const optionalItems = allItems.filter(li => li.optional);
+    const productName = allItems.find(item => item.zohoProductId && !item.optional)?.name
+        ?? allItems.find(item => item.zohoProductId)?.name
+        ?? allItems[0]?.name;
     const termsAndConditions = getProductProposalTerms(productName).termsAndConditions;
-    const requiredTotal = allItems.filter(li => !li.optional).reduce((sum, li) => sum + li.price, 0);
-    const selectedOptionalTotal = allItems.filter(li => li.optional && selectedOptionals.has(li.id)).reduce((sum, li) => sum + li.price, 0);
+    const requiredTotal = requiredItems.reduce((sum, li) => sum + li.price, 0);
+    const selectedOptionalTotal = optionalItems.filter(li => selectedOptionals.has(li.id)).reduce((sum, li) => sum + li.price, 0);
     const grandTotal = Math.max(0, requiredTotal + selectedOptionalTotal - proposal.discount);
 
     return (
@@ -196,27 +161,56 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
 
                 {/* ── Scope of Work Sections ────────────────────────────────────── */}
                 <div className="preview-sections">
-                    {proposal.sections.map((section, sIdx) => (
-                        <div key={section.id} className="preview-section" style={{ animation: `slideUp 0.6s ease-out ${sIdx * 0.1}s both` }}>
-                            {/* Client view: scope titles/codes are hidden; admin uses the editor. */}
+                    {/* Required scope-of-work items */}
+                    {requiredItems.length > 0 && (
+                        <div className="preview-section" style={{ animation: `slideUp 0.6s ease-out both` }}>
                             <div className="preview-items">
-                                {section.lineItems.map((item) => (
-                                    <div key={item.id} className={`preview-item-row ${item.optional ? 'is-optional' : ''}`}>
+                                {requiredItems.map((item) => (
+                                    <div key={item.id} className="preview-item-row">
+                                        <div className="item-main-content">
+                                            <p className="item-description item-description--client">{item.description}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Optional add-ons — separate entity, unselected by default */}
+                    {optionalItems.length > 0 && (
+                        <div className="preview-section" style={{ animation: `slideUp 0.6s ease-out 0.1s both` }}>
+                            <div style={{ marginBottom: '16px' }}>
+                                <span
+                                    style={{
+                                        display: 'inline-block',
+                                        background: '#1A56DB',
+                                        color: 'white',
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.05em',
+                                        padding: '4px 10px',
+                                        textTransform: 'uppercase',
+                                    }}
+                                >
+                                    OPTION:
+                                </span>
+                            </div>
+                            <div className="preview-items">
+                                {optionalItems.map((item) => (
+                                    <div key={item.id} className="preview-item-row is-optional">
                                         <div className="item-main-content">
                                             <div className="item-header-row">
                                                 <p className="item-description item-description--client">{item.description}</p>
                                                 <div className="item-price-pill item-price-pill--client">
-                                                    {item.optional && (
-                                                        <button
-                                                            className={`preview-select-btn ${selectedOptionals.has(item.id) ? 'selected' : ''}`}
-                                                            onClick={() => toggleOptional(item.id)}
-                                                            type="button"
-                                                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                        >
-                                                            {selectedOptionals.has(item.id) && <Check size={12} />}
-                                                            {selectedOptionals.has(item.id) ? 'Selected' : 'Add to Project'}
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        className={`preview-select-btn ${selectedOptionals.has(item.id) ? 'selected' : ''}`}
+                                                        onClick={() => toggleOptional(item.id)}
+                                                        type="button"
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                    >
+                                                        {selectedOptionals.has(item.id) && <Check size={12} />}
+                                                        {selectedOptionals.has(item.id) ? 'Selected' : 'Add to Project'}
+                                                    </button>
                                                     <span className="item-price-value">
                                                         ${item.price.toLocaleString()}
                                                     </span>
@@ -227,7 +221,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                                 ))}
                             </div>
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 {/* ── Final Summary, Terms, Approval ───────────────────────────── */}
@@ -260,28 +254,15 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                     </div>
 
                     <section className="preview-terms-section" aria-label="Terms and Conditions">
-                        <button
-                            type="button"
-                            className="preview-terms-toggle"
-                            onClick={() => setTermsExpanded((v) => !v)}
-                            aria-expanded={termsExpanded}
-                        >
-                            <ChevronDown
-                                size={20}
-                                className={`preview-terms-chevron ${termsExpanded ? "is-open" : ""}`}
-                                aria-hidden
-                            />
-                            <span className="preview-terms-toggle-label">Terms & Conditions</span>
-                            <span className="preview-terms-toggle-hint">
-                                {termsExpanded ? "Hide" : "View full Terms & Conditions"}
-                            </span>
-                        </button>
-                        {termsExpanded && (
-                            <div className="preview-terms-body">
-                                <pre className="preview-terms-pre">{termsAndConditions}</pre>
-                            </div>
-                        )}
+                        <h3 className="preview-terms-heading">Terms & Conditions</h3>
+                        <div className="preview-terms-body" tabIndex={0} aria-label="Full Terms and Conditions">
+                            <pre className="preview-terms-pre">{termsAndConditions}</pre>
+                        </div>
                     </section>
+
+                    <p id="deposit-acknowledgment" className="preview-deposit-language">
+                        <strong>Deposit:</strong> A 50% deposit is due upon execution of this agreement. The remaining balance is due upon completion of the work.
+                    </p>
 
                     <label className="preview-terms-agree-row">
                         <input
@@ -289,8 +270,9 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                             checked={agreedToTerms}
                             onChange={(e) => setAgreedToTerms(e.target.checked)}
                             disabled={isApproved}
+                            aria-describedby="deposit-acknowledgment"
                         />
-                        <span>I have read and agree to the Terms & Conditions</span>
+                        <span>I have read and agree to the Terms & Conditions and acknowledge that a 50% deposit is due upon execution.</span>
                     </label>
 
                     <div className="action-buttons">
@@ -322,12 +304,6 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                 onConfirm={handleConfirmSignature}
                 isSaving={isApproving}
                 clientName={jobMeta.contactName}
-            />
-
-            <LegacyProposalPDF 
-                proposal={proposal}
-                jobMeta={jobMeta}
-                signatureData={signatureData}
             />
         </div>
     );

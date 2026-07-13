@@ -32,7 +32,7 @@ export function ProposalSummary({
 
   const optionalItems = allItems.filter((li) => li.optional);
   const optionalTotal = optionalItems.reduce((sum, li) => sum + li.price, 0);
-  const grandTotal = Math.max(0, requiredTotal + optionalTotal - discount);
+  const grandTotal = Math.max(0, requiredTotal - discount);
 
   return (
     <aside className="summary-panel">
@@ -80,7 +80,7 @@ export function ProposalSummary({
               ${grandTotal.toLocaleString()}
             </span>
           </div>
-          <p className="summary-total-footnote">if all options selected</p>
+          <p className="summary-total-footnote">optional add-ons not included</p>
         </div>
       </div>
 

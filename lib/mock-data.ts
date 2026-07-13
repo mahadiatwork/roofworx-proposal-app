@@ -51,6 +51,9 @@ export type JobMeta = {
   contactName: string;
   contactEmail: string;
   propertyAddress: string;
+  propertyCity: string;
+  propertyState: string;
+  propertyZip: string;
   propertyClass: string;
   salesperson: string;
   recipientModule: string;
@@ -78,6 +81,7 @@ export type CatalogItem = {
 type ZohoDealRecord = {
   id?: string;
   Deal_Name?: string;
+  Proposal_Number?: string;
   Proposal_ID?: string;
   Property_Address?: string;
   Modified_Time?: string;
@@ -88,6 +92,22 @@ type ZohoDealRecord = {
   Contact_Name?: { name: string; id: string };
   Contact_Email?: string;
   Email?: string;
+};
+
+type ZohoAccountRecord = {
+  id?: string;
+  Account_Name?: string;
+  Billing_Street?: string;
+  Billing_City?: string;
+  Billing_State?: string;
+  Billing_Code?: string;
+  Billing_Country?: string;
+  Shipping_Street?: string;
+  Shipping_City?: string;
+  Shipping_State?: string;
+  Shipping_Code?: string;
+  Shipping_Country?: string;
+  Phone?: string;
 };
 
 type ZohoContactRecord = {
@@ -116,6 +136,7 @@ function normalizePrice(value: number | string | undefined): number {
 import {
   getProductTemplateDescription,
   ROOFWORX_CONTRACTOR_INTRO,
+  stripLegacyTemplateOptions,
 } from "@/lib/terms-and-conditions";
 
 function getCatalogDescription(name: string, fallback: string): string {
@@ -321,6 +342,65 @@ export const CATALOG_ITEMS: CatalogItem[] = [
   },
 ];
 
+// ── Options Catalog ───────────────────────────────────────────────────────────
+// Add-on upgrades and warranties offered alongside the selected scope-of-work
+// template. These are NOT linked to Zoho products — they have empty
+// `zohoProductId` so the save-draft flow treats them as manual line items.
+// They are added to the proposal as optional line items and render under an
+// "OPTION:" block in the client-facing preview/PDF.
+
+export const OPTION_ITEMS: CatalogItem[] = [
+  {
+    id: "opt-gaf-silver-pledge",
+    name: "GAF Silver Pledge Limited Warranty",
+    category: "Options",
+    description: "GAF Silver Pledge Limited Warranty",
+    defaultPrice: 264,
+    zohoProductId: "",
+  },
+  {
+    id: "opt-gaf-golden-pledge",
+    name: "GAF Golden Pledge Limited Warranty",
+    category: "Options",
+    description: "GAF Golden Pledge Limited Warranty",
+    defaultPrice: 316,
+    zohoProductId: "",
+  },
+  {
+    id: "opt-certainteed-4star",
+    name: "CertainTeed 4-Star Limited Warranty",
+    category: "Options",
+    description: "CertainTeed 4-Star Limited Warranty",
+    defaultPrice: 145,
+    zohoProductId: "",
+  },
+  {
+    id: "opt-upgrade-landmark-pro",
+    name: "Upgrade shingles to CertainTeed Landmark Pro",
+    category: "Options",
+    description: "Upgrade shingles to CertainTeed Landmark Pro",
+    defaultPrice: 750,
+    zohoProductId: "",
+  },
+  {
+    id: "opt-upgrade-northgate",
+    name: "Upgrade shingles to CertainTeed NorthGate Climate Flex",
+    category: "Options",
+    description: "Upgrade shingles to CertainTeed NorthGate Climate Flex",
+    defaultPrice: 3545,
+    zohoProductId: "",
+  },
+  {
+    id: "opt-velux-skylight",
+    name: "Install new VELUX skylight with preinstalled white, room-darkening, solar-powered, battery-operated shade in existing location",
+    category: "Options",
+    description:
+      "Install new VELUX skylight with preinstalled white, room-darkening, solar-powered, battery-operated shade in existing location",
+    defaultPrice: 1960,
+    zohoProductId: "",
+  },
+];
+
 // ── Mock Job Meta ─────────────────────────────────────────────────────────────
 
 export const MOCK_JOB_META: JobMeta = {
@@ -330,6 +410,9 @@ export const MOCK_JOB_META: JobMeta = {
   contactName: "Eugene Data",
   contactEmail: "eugene.data@example.com",
   propertyAddress: "146 N. Broadview Ave",
+  propertyCity: "Elk Grove Village",
+  propertyState: "IL",
+  propertyZip: "60007",
   propertyClass: "Residential",
   salesperson: "Sarah Jenkins",
   recipientModule: "Deals",
@@ -375,15 +458,30 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
       ? ((await zohoClient.getRecord("Contacts", dealContact.id)) as ZohoContactRecord | null)
       : null;
 
+    // Pull the related Account so we get the full billing address (city/state/zip).
+    const accountId = (deal.Account_Name as any)?.id;
+    const account = accountId
+      ? ((await zohoClient.getRecord("Accounts", accountId)) as ZohoAccountRecord | null)
+      : null;
+
+    const billingStreet = account?.Billing_Street?.trim() || "";
+    const billingCity = account?.Billing_City?.trim() || "";
+    const billingState = account?.Billing_State?.trim() || "";
+    const billingZip = account?.Billing_Code?.trim() || "";
+
     // 2. Map Zoho Deal to JobMeta
     const liveJobMeta: JobMeta = {
       ...MOCK_JOB_META, // Use mock as base for fields not in Deal yet
       jobTicket: deal.Deal_Name || MOCK_JOB_META.jobTicket,
-      proposalNumber: deal.Proposal_ID || jobId,
-      accountName: (deal.Account_Name as any)?.name || MOCK_JOB_META.accountName,
+      // Use the dedicated all-numeric Proposal_Number field; fall back to Proposal_ID or jobId.
+      proposalNumber: deal.Proposal_Number || deal.Proposal_ID || jobId,
+      accountName: (deal.Account_Name as any)?.name || account?.Account_Name || MOCK_JOB_META.accountName,
       contactName: dealContact?.name || MOCK_JOB_META.contactName,
       contactEmail: contact?.Email || deal.Contact_Email || deal.Email || MOCK_JOB_META.contactEmail,
-      propertyAddress: deal.Property_Address || MOCK_JOB_META.propertyAddress,
+      propertyAddress: billingStreet || deal.Property_Address || MOCK_JOB_META.propertyAddress,
+      propertyCity: billingCity || MOCK_JOB_META.propertyCity,
+      propertyState: billingState || MOCK_JOB_META.propertyState,
+      propertyZip: billingZip || MOCK_JOB_META.propertyZip,
       // Zoho Owner field is an object { name, id }
       salesperson: (deal.Owner as any)?.name || MOCK_JOB_META.salesperson,
       recipientModule: dealContact?.id ? "Contacts" : "Deals",
@@ -425,7 +523,7 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
          const lineItems: LineItem[] = relatedItems.map((ri: any) => ({
            id: ri.id,
            name: (ri.Products as any)?.name || "Product", // Zoho lookup often returns {name, id}
-           description: (ri.Product_Description as string) || "",
+           description: stripLegacyTemplateOptions((ri.Product_Description as string) || ""),
            price: normalizePrice(ri.Pricing),
            optional: ri.Purchase_Option === "Optional" || ri.Purchase_Option === "Accepted",
            purchaseOption: (ri.Purchase_Option as any) || "Mandatory",

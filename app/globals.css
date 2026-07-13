@@ -185,6 +185,36 @@
   align-items: center;
 }
 
+.save-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 99px;
+  color: #6B7280;
+  transition: 0.2s;
+}
+
+.save-status-pill--saved {
+  color: #548471;
+}
+
+.save-status-pill--unsaved {
+  color: #92400E;
+  background: #FEF3C7;
+}
+
+.save-status-pill--saving {
+  color: #374151;
+}
+
+.save-status-pill--error {
+  color: #B91C1C;
+  background: #FEE2E2;
+}
+
 .btn-header-ghost {
   background: transparent;
   border: none;
@@ -1467,71 +1497,48 @@
 
 .preview-terms-section {
   width: 100%;
-  max-width: 640px;
+  max-width: 760px;
   margin-bottom: 28px;
   text-align: left;
 }
 
-.preview-terms-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  background: #fafafa;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.preview-terms-toggle:hover {
-  background: #f3f4f6;
-  border-color: #e5e7eb;
-}
-
-.preview-terms-chevron {
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-  color: #6b7280;
-}
-
-.preview-terms-chevron.is-open {
-  transform: rotate(180deg);
-}
-
-.preview-terms-toggle-label {
+.preview-terms-heading {
+  margin: 0 0 12px;
   font-weight: 800;
   color: #111;
-  font-size: 15px;
-}
-
-.preview-terms-toggle-hint {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
+  font-size: 18px;
 }
 
 .preview-terms-body {
-  margin-top: 12px;
-  padding: 16px;
-  border: 1px dashed #e5e7eb;
+  padding: 24px;
+  border: 1px solid #d1d5db;
   border-radius: 12px;
   background: #fff;
-  max-height: 280px;
+  max-height: 520px;
   overflow-y: auto;
 }
 
 .preview-terms-pre {
   margin: 0;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 12px;
-  line-height: 1.65;
-  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #374151;
   white-space: pre-wrap;
+}
+
+.preview-deposit-language {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border: 1px solid #d8e6dd;
+  border-radius: 12px;
+  background: #f2f7f4;
+  color: #244535;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
 }
 
 .preview-terms-agree-row {
@@ -1539,7 +1546,7 @@
   align-items: flex-start;
   gap: 10px;
   margin-bottom: 20px;
-  max-width: 420px;
+  max-width: 760px;
   text-align: left;
   font-size: 14px;
   color: #374151;

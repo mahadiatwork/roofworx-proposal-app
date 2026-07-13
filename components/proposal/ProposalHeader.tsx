@@ -35,6 +35,7 @@ interface HeaderProps {
   onSend: () => void;
   onBack: () => void;
   isSaving?: boolean;
+  saveStatus?: "saved" | "saving" | "unsaved" | "error";
   isEditMode?: boolean;
   hasSelection: boolean;
 }
@@ -47,6 +48,7 @@ export function ProposalHeader({
   onSend,
   onBack,
   isSaving,
+  saveStatus = "saved",
   isEditMode,
   hasSelection,
 }: HeaderProps) {
@@ -96,6 +98,17 @@ export function ProposalHeader({
       <div className="header-actions">
         {hasSelection && (
           <>
+            <span
+              className={`save-status-pill save-status-pill--${saveStatus}`}
+              aria-live="polite"
+              aria-label={`Save status: ${saveStatus}`}
+            >
+              {saveStatus === "saving" && <Loader2 className="animate-spin" size={12} />}
+              {saveStatus === "saved" && "Saved"}
+              {saveStatus === "unsaved" && "Unsaved changes"}
+              {saveStatus === "saving" && "Saving..."}
+              {saveStatus === "error" && "Save failed"}
+            </span>
             <button
               className="btn-header-ghost"
               onClick={onSaveDraft}
@@ -138,7 +151,17 @@ export function MetaBar({ jobMeta }: MetaBarProps) {
         label="Account / Contact"
         value={`${jobMeta.contactName} / ${jobMeta.accountName}`}
       />
-      <MetaItem label="Property Address" value={jobMeta.propertyAddress} />
+      <MetaItem
+        label="Property Address"
+        value={[
+          jobMeta.propertyAddress,
+          [jobMeta.propertyCity, jobMeta.propertyState, jobMeta.propertyZip]
+            .filter(Boolean)
+            .join(" "),
+        ]
+          .filter(Boolean)
+          .join(", ")}
+      />
       <MetaItem label="Property Class" value={jobMeta.propertyClass} />
       <MetaItem label="Salesperson" value={jobMeta.salesperson} />
     </div>

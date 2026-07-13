@@ -25,7 +25,6 @@ export default async function ProposalPage(props: PageProps<"/proposal/[jobId]">
 
   return (
     <ProposalPageClient
-      key={proposal.id}
       jobId={jobId}
       initialProposal={proposal}
       jobMeta={jobMeta}
