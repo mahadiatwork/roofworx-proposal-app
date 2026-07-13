@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Check, Mail, MapPin, Phone, Globe, Loader2 } from "lucide-react";
+import { Check, Mail, MapPin, Phone, Globe, Loader2, X } from "lucide-react";
 import { getProductProposalTerms } from "@/lib/terms-and-conditions";
 import { useSearchParams } from "next/navigation";
 import type { Proposal, JobMeta } from "./types";
@@ -15,6 +15,7 @@ interface ProposalPreviewProps {
 
 export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProps) {
     const searchParams = useSearchParams();
+    const termsDialogRef = useRef<HTMLDialogElement>(null);
     const [selectedOptionals, setSelectedOptionals] = useState<Set<string>>(() => {
         const initial = new Set<string>();
         proposal.sections.forEach(s => {
@@ -27,9 +28,16 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
         return initial;
     });
     const [isApproving, setIsApproving] = useState(false);
-    const [isApproved, setIsApproved] = useState(proposal.status === 'approved' || (proposal as any).status === 'Accepted');
+    const [isApproved, setIsApproved] = useState(proposal.status === 'approved');
     const [isSigModalOpen, setIsSigModalOpen] = useState(false);
+    const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+    useEffect(() => {
+        const dialog = termsDialogRef.current;
+        if (isTermsOpen && !dialog?.open) dialog?.showModal();
+        if (!isTermsOpen && dialog?.open) dialog.close();
+    }, [isTermsOpen]);
 
     const toggleOptional = (id: string) => {
         // Locked if already Accepted/Approved in CRM
@@ -254,26 +262,21 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                     </div>
 
                     <section className="preview-terms-section" aria-label="Terms and Conditions">
-                        <h3 className="preview-terms-heading">Terms & Conditions</h3>
-                        <div className="preview-terms-body" tabIndex={0} aria-label="Full Terms and Conditions">
-                            <pre className="preview-terms-pre">{termsAndConditions}</pre>
-                        </div>
+                        <button
+                            type="button"
+                            className={`preview-terms-launch ${agreedToTerms ? "is-accepted" : ""}`}
+                            onClick={() => setIsTermsOpen(true)}
+                            aria-haspopup="dialog"
+                        >
+                            <span>
+                                <strong>Review Terms & Conditions</strong>
+                                <small>{agreedToTerms ? "Accepted - click to review" : "Required before signing"}</small>
+                            </span>
+                            <span className="preview-terms-launch-status">
+                                {agreedToTerms ? <Check size={18} aria-hidden /> : "Open"}
+                            </span>
+                        </button>
                     </section>
-
-                    <p id="deposit-acknowledgment" className="preview-deposit-language">
-                        <strong>Deposit:</strong> A 50% deposit is due upon execution of this agreement. The remaining balance is due upon completion of the work.
-                    </p>
-
-                    <label className="preview-terms-agree-row">
-                        <input
-                            type="checkbox"
-                            checked={agreedToTerms}
-                            onChange={(e) => setAgreedToTerms(e.target.checked)}
-                            disabled={isApproved}
-                            aria-describedby="deposit-acknowledgment"
-                        />
-                        <span>I have read and agree to the Terms & Conditions and acknowledge that a 50% deposit is due upon execution.</span>
-                    </label>
 
                     <div className="action-buttons">
                         <button 
@@ -292,11 +295,58 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
 
                     <p className="footer-legal">
                         This document is a formal estimate for the scope of work described above.
-                        By clicking "Approve Proposal", you authorize RoofWorx to proceed with the scheduling
+                        By clicking &quot;Approve Proposal&quot;, you authorize RoofWorx to proceed with the scheduling
                         and procurement for your project according to our standard terms.
                     </p>
                 </footer>
             </main>
+
+            <dialog
+                ref={termsDialogRef}
+                className="preview-terms-dialog"
+                onClose={() => setIsTermsOpen(false)}
+                aria-labelledby="terms-dialog-title"
+            >
+                <div className="preview-terms-dialog-shell">
+                    <header className="preview-terms-dialog-header">
+                        <div>
+                            <span>Agreement Review</span>
+                            <h2 id="terms-dialog-title">Terms & Conditions</h2>
+                        </div>
+                        <button type="button" onClick={() => setIsTermsOpen(false)} aria-label="Close terms and conditions">
+                            <X size={24} aria-hidden />
+                        </button>
+                    </header>
+
+                    <div className="preview-terms-dialog-scroll">
+                        <pre className="preview-terms-pre">{termsAndConditions}</pre>
+
+                        <p id="deposit-acknowledgment" className="preview-deposit-language">
+                            <strong>Deposit:</strong> A 50% deposit is due upon execution of this agreement. The remaining balance is due upon completion of the work.
+                        </p>
+
+                        <label className="preview-terms-agree-row">
+                            <input
+                                type="checkbox"
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                disabled={isApproved}
+                                aria-describedby="deposit-acknowledgment"
+                            />
+                            <span>I have read and agree to the Terms & Conditions and acknowledge that a 50% deposit is due upon execution.</span>
+                        </label>
+
+                        <button
+                            type="button"
+                            className="preview-terms-continue"
+                            onClick={() => setIsTermsOpen(false)}
+                            disabled={!agreedToTerms}
+                        >
+                            Continue to Proposal
+                        </button>
+                    </div>
+                </div>
+            </dialog>
 
             <SignatureModal 
                 isOpen={isSigModalOpen}
