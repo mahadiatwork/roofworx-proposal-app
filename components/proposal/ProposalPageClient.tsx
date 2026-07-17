@@ -296,7 +296,7 @@ const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
     }
 
     autoSaveTimeoutRef.current = setTimeout(() => {
-      saveDraft({ silent: true, updateUrl: false });
+      saveDraft({ silent: true, updateUrl: isNewMode && proposal.id.startsWith("new-") });
     }, 5000);
 
     return () => {
@@ -304,7 +304,7 @@ const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [proposal, hasSelection, saveDraft]);
+  }, [proposal, hasSelection, saveDraft, isNewMode]);
 
   // Warn the user if they try to close the tab with unsaved changes.
   useEffect(() => {
@@ -500,7 +500,7 @@ const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
             quoteId: activeQuoteId || proposal.id,
             jobId: jobId,
             toEmail: jobMeta.contactEmail,
-            subject: `Roofing Proposal for ${jobMeta.accountName} - ${proposal.title}`,
+            subject: jobMeta.propertyAddress,
             body: `Hi ${jobMeta.contactName},\n\nIt was a pleasure meeting you to discuss your project. We have prepared a detailed digital proposal for the exterior work we discussed.\n\nYou can review the specifications and approve or request changes by clicking the secure link below.\n\nThank you for considering RoofWorx Exteriors!`,
             proposalUrl: `https://roofworx-proposal-app.vercel.app/p/${jobId}?quoteId=${activeQuoteId || proposal.id}`,
             recipientModule: jobMeta.recipientModule,

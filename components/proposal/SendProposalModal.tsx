@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { X, Send, Mail, Link as LinkIcon, Loader2 } from "lucide-react";
 
 interface SendProposalModalProps {
@@ -31,11 +30,9 @@ export function SendProposalModal({
   isSending,
 }: SendProposalModalProps) {
   const [draft, setDraft] = useState<ProposalEmailDraft>(defaultDraft);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setAgreedToTerms(false);
       setDraft(defaultDraft);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset form when modal opens; avoid re-running on every defaultDraft identity change from parent
@@ -45,10 +42,6 @@ export function SendProposalModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agreedToTerms) {
-      toast.warning("Agree to the Terms & Conditions before sending.");
-      return;
-    }
     await onConfirmSend(draft);
   };
 
@@ -113,20 +106,11 @@ export function SendProposalModal({
             </div>
           </div>
 
-          <label className="send-modal-terms-agree">
-            <input
-              type="checkbox"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-            />
-            <span>I have read and agree to the Terms & Conditions</span>
-          </label>
-
           <div className="send-modal-footer">
             <button type="button" className="btn-cancel" onClick={onClose} disabled={isSending}>
               Cancel
             </button>
-            <button type="submit" className="btn-send-confirm" disabled={isSending || !agreedToTerms}>
+            <button type="submit" className="btn-send-confirm" disabled={isSending}>
               {isSending ? (
                 <>
                   <Loader2 className="animate-spin" size={18} />

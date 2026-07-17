@@ -80,7 +80,7 @@ export function LegacyProposalPDF({
       {/* ── Client / Job Site Boxes ───────────────────────────────── */}
       <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         <div style={{ flex: 1, border: "1px solid black", padding: "10px" }}>
-          <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
+          <div style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "8px" }}>
             Proposal Submitted To: (&quot;Customer&quot;)
           </div>
           <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
@@ -92,7 +92,7 @@ export function LegacyProposalPDF({
           </div>
         </div>
         <div style={{ flex: 1, border: "1px solid black", padding: "10px" }}>
-          <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
+          <div style={{ fontSize: "12px", fontWeight: "bold", marginBottom: "8px" }}>
             Job Site:
           </div>
           <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
@@ -105,7 +105,7 @@ export function LegacyProposalPDF({
       </div>
 
       {/* ── Intro Text ────────────────────────────────────────────── */}
-      <div style={{ fontSize: "12px", textAlign: "justify", marginBottom: "20px", borderTop: "2px solid black", paddingTop: "10px" }}>
+      <div style={{ fontSize: "12px", textAlign: "justify", marginBottom: "20px" }}>
         <p style={{ margin: "0" }}>{proposal.introText || ROOFWORX_CONTRACTOR_INTRO}</p>
       </div>
 
@@ -185,7 +185,7 @@ export function LegacyProposalPDF({
       </div>
 
       {/* ── Acceptance Footer ─────────────────────────────────────── */}
-      <div style={{ marginTop: "40px", border: "1px solid black", padding: "20px" }}>
+      <div style={{ marginTop: "40px", border: "1px solid black", padding: "20px", breakInside: "avoid", pageBreakInside: "avoid" }}>
         <h2 style={{ fontSize: "16px", textAlign: "center", textDecoration: "underline", margin: "0 0 20px 0" }}>
           ACCEPTANCE OF PROPOSAL
         </h2>
