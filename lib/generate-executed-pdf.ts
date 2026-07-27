@@ -6,6 +6,20 @@ export async function generateExecutedProposalPdf(): Promise<string | null> {
   const html2canvas = (await import("html2canvas")).default;
   const { jsPDF } = await import("jspdf");
 
+  // Ensure logo/signature images are fully loaded before capturing,
+  // otherwise html2canvas renders them blank.
+  const images = Array.from(element.querySelectorAll("img"));
+  await Promise.all(
+    images.map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })
+    )
+  );
+
   const canvas = await html2canvas(element, {
     scale: 2,
     useCORS: true,

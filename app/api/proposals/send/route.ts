@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const finalRecipientId = recipientId || jobId;
 
     const htmlContent = buildProposalEmailHtml(emailBody, {
-      ctaLabel: "View Your Digital Proposal",
+      ctaLabel: "View Your Proposal",
       ctaUrl: proposalUrl,
     });
 

@@ -62,6 +62,11 @@ export function LegacyProposalPDF({
       {/* ── Header ────────────────────────────────────────────────── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "30px" }}>
         <div style={{ textAlign: "left" }}>
+          <img
+            src="/Roofworx-logo.png"
+            alt="Roof Worx Exteriors"
+            style={{ height: "80px", width: "auto", display: "block", marginBottom: "12px" }}
+          />
           <h1 style={{ fontSize: "28px", margin: "0", fontWeight: "900" }}>Roof Worx Exteriors, Inc.</h1>
           <div style={{ fontSize: "14px", fontWeight: "700" }}>
             <p style={{ margin: "2px 0" }}>630 Bonnie Lane</p>
