@@ -211,7 +211,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                     <div className="client-info-section">
                         <span className="info-label">YOUR REPRESENTATIVE</span>
                         <h3 className="rep-name">{jobMeta.salesperson}</h3>
-                        <p className="rep-meta"><Mail size={14} /> office@roofworx.com</p>
+                        <p className="rep-meta"><Mail size={14} /> office@roofworxext.com</p>
                         <p className="rep-meta" style={{ marginTop: '4px' }}><Globe size={14} /> roofworx.com/team</p>
                     </div>
                 </section>

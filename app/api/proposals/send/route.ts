@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
     } catch (zohoError: unknown) {
       const message =
         zohoError instanceof Error ? zohoError.message : "Zoho CRM Mail API rejected this request.";
-      console.error("❌ Zoho Send Mail API Failed:", zohoError);
+      // Log only the message; the full axios error carries the OAuth token in its headers.
+      console.error("❌ Zoho Send Mail API Failed:", message);
       return NextResponse.json(
         {
           success: false,

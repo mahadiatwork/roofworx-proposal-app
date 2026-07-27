@@ -1,10 +1,11 @@
 import { zohoClient } from "@/lib/zoho/ZohoCRMClient";
 
-export const OFFICE_EMAIL = "office@roofworx.com";
+export const OFFICE_EMAIL = "office@roofworxext.com";
 export const OFFICE_NAME = "Roof Worx Office";
 
+// Organization email must be sent with org_email: true in the Zoho payload.
 export const PROPOSAL_FROM = {
-  user_name: process.env.PROPOSAL_FROM_NAME || "Roof Worx Exteriors",
+  user_name: process.env.PROPOSAL_FROM_NAME || "Office - Roofworx",
   email: process.env.PROPOSAL_FROM_EMAIL || OFFICE_EMAIL,
 };
 
@@ -98,7 +99,7 @@ export async function sendProposalMail(options: SendProposalMailOptions) {
         subject: options.subject,
         content: options.htmlContent,
         mail_format: "html",
-        org_email: false,
+        org_email: true,
       },
     ],
   };

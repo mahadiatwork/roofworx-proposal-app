@@ -30,7 +30,7 @@ class ZohoCRMClient {
   private tokenCacheDuration: number = 50 * 60 * 1000; // 50 minutes
 
   constructor() {
-    const datacenter = process.env.ZOHO_DATACENTER || 'com.au';
+    const datacenter = process.env.ZOHO_DATACENTER || 'com';
     this.baseURL = `https://www.zohoapis.${datacenter}/crm/v7`;
 
     console.log(`🌍 Zoho CRM configured: ${this.baseURL} (datacenter: ${datacenter})`);
@@ -278,7 +278,7 @@ class ZohoCRMClient {
     if (!token) throw new Error("No Zoho access token available");
 
     // Construct the v8 URL
-    const datacenter = process.env.ZOHO_DATACENTER || 'com.au';
+    const datacenter = process.env.ZOHO_DATACENTER || 'com';
     const v8BaseURL = `https://www.zohoapis.${datacenter}/crm/v8`;
     const url = `${v8BaseURL}/${moduleName}/${recordId}/actions/send_mail`;
 
@@ -306,7 +306,7 @@ class ZohoCRMClient {
     const token = await this.getAccessToken();
     if (!token) throw new Error("No Zoho access token available");
 
-    const datacenter = process.env.ZOHO_DATACENTER || 'com.au';
+    const datacenter = process.env.ZOHO_DATACENTER || 'com';
     const url = `https://www.zohoapis.${datacenter}/crm/v7/${moduleName}/${id}/Attachments`;
 
     // Use native FormData (available in Node 18+)
@@ -335,7 +335,7 @@ class ZohoCRMClient {
     const token = await this.getAccessToken();
     if (!token) throw new Error("No Zoho access token available");
 
-    const datacenter = process.env.ZOHO_DATACENTER || 'com.au';
+    const datacenter = process.env.ZOHO_DATACENTER || 'com';
     const url = `https://www.zohoapis.${datacenter}/crm/v8/files`;
 
     const formData = new FormData();
