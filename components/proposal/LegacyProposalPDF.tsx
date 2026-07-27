@@ -67,7 +67,7 @@ export function LegacyProposalPDF({
             <p style={{ margin: "2px 0" }}>630 Bonnie Lane</p>
             <p style={{ margin: "2px 0" }}>Elk Grove Village, Illinois 60007</p>
             <p style={{ margin: "2px 0" }}>(630) 634-7600</p>
-            <p style={{ margin: "2px 0" }}>office@roofworxext.com</p>
+            <p style={{ margin: "2px 0" }}>office@roofworx.com</p>
             <p style={{ margin: "2px 0" }}>Lic. No. 104.019583</p>
           </div>
         </div>

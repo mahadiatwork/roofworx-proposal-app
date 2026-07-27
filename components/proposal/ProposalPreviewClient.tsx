@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Check, Mail, MapPin, Phone, Globe, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
 import { getProductProposalTerms } from "@/lib/terms-and-conditions";
+import { generateExecutedProposalPdf } from "@/lib/generate-executed-pdf";
 import { useSearchParams } from "next/navigation";
 import type { Proposal, JobMeta } from "./types";
 import { SignatureModal } from "./SignatureModal";
+import { LegacyProposalPDF } from "./LegacyProposalPDF";
 
 interface ProposalPreviewProps {
     proposal: Proposal;
@@ -32,12 +35,23 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
     const [isSigModalOpen, setIsSigModalOpen] = useState(false);
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [pdfSignature, setPdfSignature] = useState<string | null>(null);
+    const [isQuestionsOpen, setIsQuestionsOpen] = useState(false);
+    const [questionMessage, setQuestionMessage] = useState("");
+    const [isSendingQuestion, setIsSendingQuestion] = useState(false);
+    const questionsDialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
         const dialog = termsDialogRef.current;
         if (isTermsOpen && !dialog?.open) dialog?.showModal();
         if (!isTermsOpen && dialog?.open) dialog.close();
     }, [isTermsOpen]);
+
+    useEffect(() => {
+        const dialog = questionsDialogRef.current;
+        if (isQuestionsOpen && !dialog?.open) dialog?.showModal();
+        if (!isQuestionsOpen && dialog?.open) dialog.close();
+    }, [isQuestionsOpen]);
 
     const toggleOptional = (id: string) => {
         // Locked if already Accepted/Approved in CRM
@@ -65,16 +79,25 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
 
     const handleConfirmSignature = async (base64: string) => {
         setIsSigModalOpen(false);
+        setPdfSignature(base64);
         setIsApproving(true);
 
         try {
             const quoteId = searchParams?.get('quoteId') || proposal.id;
+            await new Promise<void>((resolve) => {
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+            });
+
+            const executedPdf = await generateExecutedProposalPdf();
             const formData = new FormData();
             formData.append('quoteId', quoteId!);
-            formData.append('jobId', jobMeta.recipientId);
+            formData.append('dealId', jobMeta.dealId);
             formData.append('signature', base64);
             formData.append('selectedOptionals', JSON.stringify(Array.from(selectedOptionals)));
             formData.append('agreementAccepted', String(agreedToTerms));
+            if (executedPdf) {
+                formData.append('executedPdf', executedPdf);
+            }
 
             const res = await fetch("/api/proposals/approve", {
                 method: "POST",
@@ -85,14 +108,50 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
             
             if (res.ok && data.success) {
                 setIsApproved(true);
+                toast.success("Proposal approved. Confirmation emails are on the way.");
             } else {
-                alert(data.error || "Failed to finalize approval. Please try again.");
+                toast.error(data.error || "Failed to finalize approval. Please try again.");
             }
         } catch (error) {
             console.error("Fulfillment error:", error);
-            alert("An error occurred during finalization. Please contact your representative.");
+            toast.error("An error occurred during finalization. Please contact your representative.");
         } finally {
+            setPdfSignature(null);
             setIsApproving(false);
+        }
+    };
+
+    const handleSendQuestions = async () => {
+        const quoteId = searchParams?.get('quoteId') || proposal.id;
+        if (!quoteId || quoteId.startsWith('new-')) {
+            toast.error("This proposal is not ready for questions yet.");
+            return;
+        }
+
+        setIsSendingQuestion(true);
+        try {
+            const res = await fetch("/api/proposals/questions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    quoteId,
+                    dealId: jobMeta.dealId,
+                    message: questionMessage.trim(),
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                toast.success("Your question has been sent to your representative.");
+                setQuestionMessage("");
+                setIsQuestionsOpen(false);
+            } else {
+                toast.error(data.error || "Could not send your question. Please try again.");
+            }
+        } catch (error) {
+            console.error("Questions error:", error);
+            toast.error("Could not send your question. Please try again.");
+        } finally {
+            setIsSendingQuestion(false);
         }
     };
 
@@ -152,7 +211,7 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                     <div className="client-info-section">
                         <span className="info-label">YOUR REPRESENTATIVE</span>
                         <h3 className="rep-name">{jobMeta.salesperson}</h3>
-                        <p className="rep-meta"><Mail size={14} /> info@roofworx.com</p>
+                        <p className="rep-meta"><Mail size={14} /> office@roofworx.com</p>
                         <p className="rep-meta" style={{ marginTop: '4px' }}><Globe size={14} /> roofworx.com/team</p>
                     </div>
                 </section>
@@ -287,7 +346,12 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                             {isApproving ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                             {isApproved ? 'Proposal Approved' : 'Approve Proposal'}
                         </button>
-                        <button className="btn-questions">
+                        <button
+                            className="btn-questions"
+                            type="button"
+                            onClick={() => setIsQuestionsOpen(true)}
+                            disabled={isApproved || isApproving}
+                        >
                             <Mail size={18} />
                             I have questions
                         </button>
@@ -355,6 +419,63 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
                 isSaving={isApproving}
                 clientName={jobMeta.contactName}
             />
+
+            {pdfSignature && (
+                <LegacyProposalPDF
+                    proposal={proposal}
+                    jobMeta={jobMeta}
+                    signatureData={pdfSignature}
+                    selectedOptionals={selectedOptionals}
+                />
+            )}
+
+            <dialog
+                ref={questionsDialogRef}
+                className="preview-terms-dialog"
+                onClose={() => setIsQuestionsOpen(false)}
+                aria-labelledby="questions-dialog-title"
+            >
+                <div className="preview-terms-dialog-shell">
+                    <header className="preview-terms-dialog-header">
+                        <div>
+                            <span>Contact Your Representative</span>
+                            <h2 id="questions-dialog-title">I Have Questions</h2>
+                        </div>
+                        <button type="button" onClick={() => setIsQuestionsOpen(false)} aria-label="Close questions dialog">
+                            <X size={24} aria-hidden />
+                        </button>
+                    </header>
+
+                    <div className="preview-terms-dialog-scroll">
+                        <p style={{ marginBottom: "16px", lineHeight: 1.6 }}>
+                            Send a note to our office team. We will follow up with you shortly.
+                        </p>
+                        <textarea
+                            value={questionMessage}
+                            onChange={(e) => setQuestionMessage(e.target.value)}
+                            rows={5}
+                            placeholder="What would you like to know about this proposal?"
+                            style={{
+                                width: "100%",
+                                padding: "12px 16px",
+                                border: "1px solid #E5E7EB",
+                                borderRadius: "10px",
+                                fontSize: "14px",
+                                resize: "vertical",
+                            }}
+                        />
+                        <button
+                            type="button"
+                            className="preview-terms-continue"
+                            onClick={handleSendQuestions}
+                            disabled={isSendingQuestion}
+                            style={{ marginTop: "16px" }}
+                        >
+                            {isSendingQuestion ? "Sending..." : "Send Question"}
+                        </button>
+                    </div>
+                </div>
+            </dialog>
         </div>
     );
 }

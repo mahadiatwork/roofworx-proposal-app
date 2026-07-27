@@ -329,6 +329,45 @@ class ZohoCRMClient {
       throw error;
     }
   }
+
+  /** Upload a file to ZFS for use as a send_mail attachment (returns encrypted file id). */
+  async uploadFileToZfs(fileContent: Buffer, fileName: string): Promise<string | null> {
+    const token = await this.getAccessToken();
+    if (!token) throw new Error("No Zoho access token available");
+
+    const datacenter = process.env.ZOHO_DATACENTER || 'com.au';
+    const url = `https://www.zohoapis.${datacenter}/crm/v8/files`;
+
+    const formData = new FormData();
+    const fileBytes = new Uint8Array(fileContent);
+    const blob = new Blob([fileBytes]);
+    formData.append('file', blob, fileName);
+
+    try {
+      const response = await axios.post<{
+        data?: Array<{
+          status?: string;
+          details?: { id?: string; name?: string };
+          message?: string;
+        }>;
+      }>(url, formData, {
+        headers: {
+          Authorization: `Zoho-oauthtoken ${token}`,
+        },
+      });
+
+      const fileId = response.data?.data?.[0]?.details?.id;
+      if (!fileId) {
+        throw new Error("Zoho ZFS upload did not return a file id.");
+      }
+      return fileId;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error("❌ Zoho ZFS Upload Error:", JSON.stringify(error.response?.data, null, 2));
+      }
+      throw error;
+    }
+  }
 }
 
 export const zohoClient = new ZohoCRMClient();

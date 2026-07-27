@@ -56,6 +56,9 @@ export type JobMeta = {
   propertyZip: string;
   propertyClass: string;
   salesperson: string;
+  salespersonEmail: string;
+  ownerId: string;
+  dealId: string;
   recipientModule: string;
   recipientId: string;
 };
@@ -87,6 +90,8 @@ type ZohoDealRecord = {
   Modified_Time?: string;
   Owner?: {
     name?: string;
+    id?: string;
+    email?: string;
   };
   Account_Name?: { name: string; id: string };
   Contact_Name?: { name: string; id: string };
@@ -415,6 +420,9 @@ export const MOCK_JOB_META: JobMeta = {
   propertyZip: "60007",
   propertyClass: "Residential",
   salesperson: "Sarah Jenkins",
+  salespersonEmail: "abiggs@roofworxext.com",
+  ownerId: "5865240000000000000",
+  dealId: "5865240000000000000",
   recipientModule: "Deals",
   recipientId: "5865240000000000000"
 };
@@ -482,8 +490,11 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
       propertyCity: billingCity || MOCK_JOB_META.propertyCity,
       propertyState: billingState || MOCK_JOB_META.propertyState,
       propertyZip: billingZip || MOCK_JOB_META.propertyZip,
-      // Zoho Owner field is an object { name, id }
-      salesperson: (deal.Owner as any)?.name || MOCK_JOB_META.salesperson,
+      // Zoho Owner field is an object { name, id, email }
+      salesperson: deal.Owner?.name || MOCK_JOB_META.salesperson,
+      salespersonEmail: deal.Owner?.email || MOCK_JOB_META.salespersonEmail,
+      ownerId: deal.Owner?.id || MOCK_JOB_META.ownerId,
+      dealId: deal.id || jobId,
       recipientModule: dealContact?.id ? "Contacts" : "Deals",
       recipientId: dealContact?.id || deal.id || jobId,
     };
@@ -504,7 +515,7 @@ export async function getProposalData(jobId: string, quoteId?: string, isNew?: b
     let activeProposal: Proposal = {
       ...MOCK_PROPOSAL,
       id: `new-${Date.now()}`,
-      title: "New Project Proposal",
+      title: liveJobMeta.propertyAddress,
       lastEditedAt: new Date().toISOString(),
       sections: [],
       discount: 0,
