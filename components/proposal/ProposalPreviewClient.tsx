@@ -89,15 +89,16 @@ export function ProposalPreviewClient({ proposal, jobMeta }: ProposalPreviewProp
             });
 
             const executedPdf = await generateExecutedProposalPdf();
+            if (!executedPdf) {
+                throw new Error("Could not generate the signed proposal PDF.");
+            }
             const formData = new FormData();
             formData.append('quoteId', quoteId!);
             formData.append('dealId', jobMeta.dealId);
             formData.append('signature', base64);
             formData.append('selectedOptionals', JSON.stringify(Array.from(selectedOptionals)));
             formData.append('agreementAccepted', String(agreedToTerms));
-            if (executedPdf) {
-                formData.append('executedPdf', executedPdf);
-            }
+            formData.append('executedPdf', executedPdf);
 
             const res = await fetch("/api/proposals/approve", {
                 method: "POST",

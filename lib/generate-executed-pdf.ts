@@ -1,6 +1,8 @@
-/** Client-side PDF capture from the hidden LegacyProposalPDF DOM node. */
-export async function generateExecutedProposalPdf(): Promise<string | null> {
-  const element = document.getElementById("legacy-proposal-pdf");
+/** Client-side PDF capture from a hidden LegacyProposalPDF DOM node. */
+export async function generateExecutedProposalPdf(
+  elementId = "legacy-proposal-pdf"
+): Promise<string | null> {
+  const element = document.getElementById(elementId);
   if (!element) return null;
 
   const html2canvas = (await import("html2canvas")).default;

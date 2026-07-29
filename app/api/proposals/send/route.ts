@@ -4,6 +4,7 @@ import {
   officeReplyTo,
   sendProposalMail,
 } from "@/lib/proposal-mail";
+import { parsePdfDataUri } from "@/lib/pdf-data-uri";
 import { zohoClient } from "@/lib/zoho/ZohoCRMClient";
 
 export async function POST(req: NextRequest) {
@@ -18,11 +19,13 @@ export async function POST(req: NextRequest) {
       proposalUrl,
       recipientModule,
       recipientId,
+      draftPdf,
     } = body;
 
-    if (!quoteId || !jobId || !toEmail || !subject || !emailBody || !proposalUrl) {
+    const pdfBuffer = parsePdfDataUri(draftPdf);
+    if (!quoteId || !jobId || !toEmail || !subject || !emailBody || !proposalUrl || !pdfBuffer) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields" },
+        { success: false, error: "Missing required fields or valid draft proposal PDF" },
         { status: 400 }
       );
     }
@@ -38,6 +41,13 @@ export async function POST(req: NextRequest) {
     });
 
     try {
+      await zohoClient.uploadAttachment(
+        "New_Quotes",
+        quoteId,
+        pdfBuffer,
+        `Draft-Proposal-${quoteId}.pdf`
+      );
+
       const sendResult = await sendProposalMail({
         module: finalModule,
         recordId: finalRecipientId,

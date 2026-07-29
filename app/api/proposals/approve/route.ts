@@ -8,13 +8,8 @@ import {
   sendProposalMail,
   uploadPdfForMailAttachment,
 } from "@/lib/proposal-mail";
+import { parsePdfDataUri } from "@/lib/pdf-data-uri";
 import { zohoClient } from "@/lib/zoho/ZohoCRMClient";
-
-function parsePdfBase64(dataUri: string): Buffer | null {
-  const match = /^data:application\/pdf;base64,(.+)$/i.exec(dataUri.trim());
-  if (!match?.[1]) return null;
-  return Buffer.from(match[1], "base64");
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,6 +29,14 @@ export async function POST(req: NextRequest) {
     if (formData.get("agreementAccepted") !== "true") {
       return NextResponse.json(
         { success: false, error: "Terms and deposit acknowledgment are required." },
+        { status: 400 }
+      );
+    }
+
+    const pdfBuffer = parsePdfDataUri(executedPdfDataUri);
+    if (!pdfBuffer) {
+      return NextResponse.json(
+        { success: false, error: "A valid signed proposal PDF is required." },
         { status: 400 }
       );
     }
@@ -64,13 +67,10 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      let pdfAttachmentId: string | undefined;
-      const pdfBuffer = executedPdfDataUri ? parsePdfBase64(executedPdfDataUri) : null;
-      if (pdfBuffer) {
-        const pdfFileName = `Executed-Proposal-${quoteId}.pdf`;
-        await zohoClient.uploadAttachment("New_Quotes", quoteId, pdfBuffer, pdfFileName);
-        pdfAttachmentId = (await uploadPdfForMailAttachment(pdfBuffer, pdfFileName)) ?? undefined;
-      }
+      const pdfFileName = `Signed-Proposal-${quoteId}.pdf`;
+      await zohoClient.uploadAttachment("New_Quotes", quoteId, pdfBuffer, pdfFileName);
+      const pdfAttachmentId =
+        (await uploadPdfForMailAttachment(pdfBuffer, pdfFileName)) ?? undefined;
 
       const context = await getProposalData(dealId, quoteId);
       if (context) {

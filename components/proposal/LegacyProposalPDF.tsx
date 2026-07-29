@@ -16,6 +16,7 @@ interface LegacyProposalPDFProps {
   jobMeta: JobMeta;
   signatureData?: string;
   selectedOptionals?: Set<string>;
+  elementId?: string;
 }
 
 export function LegacyProposalPDF({
@@ -23,6 +24,7 @@ export function LegacyProposalPDF({
   jobMeta,
   signatureData,
   selectedOptionals = new Set<string>(),
+  elementId = "legacy-proposal-pdf",
 }: LegacyProposalPDFProps) {
   const today = new Date().toLocaleDateString("en-US", {
     month: "2-digit",
@@ -47,7 +49,7 @@ export function LegacyProposalPDF({
 
   return (
     <div
-      id="legacy-proposal-pdf"
+      id={elementId}
       style={{
         width: "800px",
         padding: "50px",

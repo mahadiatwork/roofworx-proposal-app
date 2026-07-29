@@ -10,6 +10,8 @@ import { ProposalEditor } from "@/components/proposal/ProposalEditor";
 import { ProposalSummary } from "@/components/proposal/ProposalSummary";
 import { PreviewModal } from "@/components/proposal/PreviewModal";
 import { SendProposalModal, type ProposalEmailDraft } from "@/components/proposal/SendProposalModal";
+import { LegacyProposalPDF } from "@/components/proposal/LegacyProposalPDF";
+import { generateExecutedProposalPdf } from "@/lib/generate-executed-pdf";
 import { OPTION_ITEMS } from "@/lib/mock-data";
 import type {
   Proposal,
@@ -341,10 +343,15 @@ const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
   const handleConfirmSend = useCallback(async (draft: ProposalEmailDraft) => {
     setIsSending(true);
     try {
+      const draftPdf = await generateExecutedProposalPdf("draft-proposal-pdf");
+      if (!draftPdf) {
+        throw new Error("Could not generate the draft proposal PDF");
+      }
+
       const response = await fetch("/api/proposals/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({ ...draft, draftPdf }),
       });
 
       const data = await response.json();
@@ -490,6 +497,13 @@ const handleAddCatalogItem = useCallback((catalogItem: CatalogItem) => {
         proposal={proposal}
         jobMeta={jobMeta}
       />
+      {hasSelection && (
+        <LegacyProposalPDF
+          proposal={proposal}
+          jobMeta={jobMeta}
+          elementId="draft-proposal-pdf"
+        />
+      )}
       {isSendModalOpen && (
         <SendProposalModal
           isOpen={isSendModalOpen}
